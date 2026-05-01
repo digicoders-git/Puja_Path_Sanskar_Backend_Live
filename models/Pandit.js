@@ -16,8 +16,6 @@ const panditSchema = mongoose.Schema(
     gotra: { type: String, default: "" },
     currentAddress: { type: String, required: true },
     permanentAddress: { type: String, required: true },
-    city: { type: String, required: true },
-    pincode: { type: String, required: true },
     latitude: { type: Number },
     longitude: { type: Number },
 

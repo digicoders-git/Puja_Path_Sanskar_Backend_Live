@@ -17,8 +17,6 @@ const createPandit = async (req, res) => {
       gotra: req.body.gotra || "",
       currentAddress: req.body.currentAddress,
       permanentAddress: req.body.permanentAddress,
-      city: req.body.city,
-      pincode: req.body.pincode,
       latitude: req.body.latitude ? parseFloat(req.body.latitude) : undefined,
       longitude: req.body.longitude ? parseFloat(req.body.longitude) : undefined,
 
@@ -115,7 +113,7 @@ const searchPandits = async (req, res) => {
     }
 
     const pandits = await Pandit.find(filter)
-      .select("fullName mobileNumber emailId city specialization totalExperience profilePhoto selectedPujas")
+      .select("fullName mobileNumber emailId specialization totalExperience profilePhoto selectedPujas")
       .populate("selectedPujas.puja", "pujaName pujaType")
       .sort({ totalExperience: -1 });
 
@@ -147,7 +145,7 @@ const updatePandit = async (req, res) => {
 
     const fields = [
       "fullName", "mobileNumber", "alternateNumber", "emailId", "dob", "gender", "gotra",
-      "currentAddress", "permanentAddress", "city", "pincode", "latitude", "longitude",
+      "currentAddress", "permanentAddress", "latitude", "longitude",
       "aadharNumber", "panNumber", "videoLink", "socialLink",
       "totalExperience", "trainingGurukul", "specialization", "vedaSpecialization",
       "shakha", "languagesKnown", "pujaKitProvided",
