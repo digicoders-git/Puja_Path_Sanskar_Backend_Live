@@ -3,6 +3,9 @@ const Puja = require("../models/Puja");
 // Create Puja
 const createPuja = async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Image required hai", success: false });
+    }
     const puja = await Puja.create({
       pujaType: req.body.pujaType,
       duration: req.body.duration,

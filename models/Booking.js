@@ -33,6 +33,23 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    originalAmount: {
+      type: Number,
+    },
+    offer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Offer",
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+    advanceAmount: {
+      type: Number, // 25% of amount
+    },
+    remainingAmount: {
+      type: Number, // 75% of amount
+    },
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Completed", "Cancelled"],
@@ -40,8 +57,14 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid", "Failed"],
+      enum: ["Pending", "AdvancePaid", "FullyPaid", "Failed"],
       default: "Pending",
+    },
+    razorpayOrderId: {
+      type: String,
+    },
+    razorpayPaymentId: {
+      type: String,
     },
     specialInstructions: {
       type: String,

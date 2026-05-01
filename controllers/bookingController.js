@@ -1,35 +1,6 @@
 const Booking = require("../models/Booking");
 const Puja = require("../models/Puja");
 
-// Create a new booking (User App)
-const createBooking = async (req, res) => {
-  try {
-    const { pujaId, panditId, bookingDate, timeSlot, address, amount, specialInstructions } = req.body;
-
-    // Check if puja exists
-    const puja = await Puja.findById(pujaId);
-    if (!puja) {
-      return res.status(404).json({ message: "Puja not found", success: false });
-    }
-
-    const booking = new Booking({
-      user: req.user.id || req.user._id,
-      puja: pujaId,
-      pandit: panditId, 
-      bookingDate,
-      timeSlot,
-      address,
-      amount,
-      specialInstructions,
-    });
-
-    await booking.save();
-    res.status(201).json({ message: "Booking created successfully", success: true, booking });
-  } catch (error) {
-    res.status(500).json({ message: error.message, success: false });
-  }
-};
-
 // Get all bookings for a specific user (User App)
 const getUserBookings = async (req, res) => {
   try {
@@ -50,7 +21,8 @@ const getAllBookings = async (req, res) => {
     const bookings = await Booking.find()
       .populate("user", "name mobile")
       .populate("puja", "pujaType")
-      .populate("pandit", "fullName")
+      .populate("pandit", "fullName mobileNumber")
+      .populate("offer", "title discountType discountValue")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: bookings.length, bookings });
@@ -69,19 +41,17 @@ const updateBookingStatus = async (req, res) => {
       return res.status(404).json({ message: "Booking not found", success: false });
     }
 
-    // Wallet Logic: If payment is newly marked as "Paid", add amount to Admin wallet
-    if (paymentStatus === "Paid" && booking.paymentStatus !== "Paid") {
+    // Wallet Logic: If payment is newly marked as "FullyPaid", add amount to Admin wallet
+    if (paymentStatus === "FullyPaid" && booking.paymentStatus !== "FullyPaid") {
       const Admin = require("../models/Admin");
-      // Find the admin making the request or fallback to first admin
       const adminId = (req.user && (req.user.id || req.user._id)) || (req.admin && req.admin.id);
       let admin = null;
       if (adminId) {
         admin = await Admin.findById(adminId);
       }
       if (!admin) {
-        admin = await Admin.findOne(); // Fallback if admin ID not found
+        admin = await Admin.findOne();
       }
-      
       if (admin) {
         admin.walletBalance = (admin.walletBalance || 0) + booking.amount;
         await admin.save();
@@ -100,7 +70,6 @@ const updateBookingStatus = async (req, res) => {
 };
 
 module.exports = {
-  createBooking,
   getUserBookings,
   getAllBookings,
   updateBookingStatus,

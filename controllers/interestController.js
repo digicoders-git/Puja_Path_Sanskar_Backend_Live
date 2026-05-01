@@ -5,13 +5,10 @@ const User = require("../models/User");
 // Create new Interest/Lead (Authenticated)
 const createInterest = async (req, res) => {
   try {
-    const { pujaId, message } = req.body;
-    const userId = req.user.id || req.user._id;
+    const { pujaId, name, mobile, message } = req.body;
 
-    // Fetch user details from database
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found", success: false });
+    if (!pujaId || !name || !mobile) {
+      return res.status(400).json({ message: "pujaId, name aur mobile required hain", success: false });
     }
 
     const puja = await Puja.findById(pujaId);
@@ -19,12 +16,14 @@ const createInterest = async (req, res) => {
       return res.status(404).json({ message: "Puja not found", success: false });
     }
 
+    const userId = req.user?.id || req.user?._id;
+
     const interest = new Interest({
       puja: pujaId,
-      name: user.name, // Auto-filled from DB
-      mobile: user.mobile, // Auto-filled from DB
+      name,
+      mobile,
       message,
-      user: userId,
+      user: userId || undefined,
     });
 
     await interest.save();
@@ -38,7 +37,7 @@ const createInterest = async (req, res) => {
 const getAllInterests = async (req, res) => {
   try {
     const interests = await Interest.find()
-      .populate("puja", "pujaName")
+      .populate("puja", "pujaType image")
       .populate("user", "name mobile")
       .sort({ createdAt: -1 });
 

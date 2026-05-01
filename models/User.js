@@ -9,6 +9,7 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      match: [/^[0-9]{10}$/, "Mobile number 10 digits ka hona chahiye"],
     },
     role: {
       type: String,

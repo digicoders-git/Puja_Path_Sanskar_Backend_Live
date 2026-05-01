@@ -8,7 +8,7 @@ const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.post("/", Auth, createInterest);
+router.post("/", createInterest);
 
 // Admin Routes
 router.get("/admin/all", Auth, adminOnly, getAllInterests);

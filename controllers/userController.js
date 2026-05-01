@@ -16,6 +16,10 @@ const sendOtp = async (req, res) => {
     return res.status(400).json({ message: "Mobile number is required" });
   }
 
+  if (!/^[0-9]{10}$/.test(mobile)) {
+    return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye" });
+  }
+
 
   res.status(200).json({ 
     message: "OTP sent successfully (Fixed to 123456)", 
@@ -29,6 +33,10 @@ const verifyOtp = async (req, res) => {
   const { mobile, otp, name } = req.body;
   if (!mobile || !otp) {
     return res.status(400).json({ message: "Mobile and OTP are required" });
+  }
+
+  if (!/^[0-9]{10}$/.test(mobile)) {
+    return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye" });
   }
 
   // Fix OTP verification
