@@ -1,0 +1,692 @@
+{
+  "info": {
+    "name": "PoojaPath API Collection",
+    "_postman_id": "poojapath-api-collection-2024",
+    "description": "Complete API collection for PoojaPath Sansakar Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Admin User", "type": "text" },
+                { "key": "email", "value": "admin@poojapath.com", "type": "text" },
+                { "key": "password", "value": "Admin@123", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if(res.token) pm.collectionVariables.set('adminToken', res.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@poojapath.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Admin Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Updated Admin", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Admin@123\",\n  \"newPassword\": \"NewAdmin@456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "change-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/send-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "send-otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if(res.token) pm.collectionVariables.set('userToken', res.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "verify-otp"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User\",\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id"],
+              "variable": [{ "key": "id", "value": "USER_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id"],
+              "variable": [{ "key": "id", "value": "USER_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id", "toggle"],
+              "variable": [{ "key": "id", "value": "USER_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pandits",
+      "item": [
+        {
+          "name": "Get Enums",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/enums",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", "enums"]
+            }
+          }
+        },
+        {
+          "name": "Search Pandits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/search?name=sharma&city=delhi",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", "search"],
+              "query": [
+                { "key": "name", "value": "sharma" },
+                { "key": "city", "value": "delhi" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pandits By Puja",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/by-puja/:pujaId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", "by-puja", ":pujaId"],
+              "variable": [{ "key": "pujaId", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Create Pandit",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Pandit Ramesh Sharma", "type": "text" },
+                { "key": "phone", "value": "9876543210", "type": "text" },
+                { "key": "email", "value": "pandit@example.com", "type": "text" },
+                { "key": "city", "value": "Delhi", "type": "text" },
+                { "key": "experience", "value": "10", "type": "text" },
+                { "key": "specialization", "value": "Satyanarayan Puja", "type": "text" },
+                { "key": "languages", "value": "Hindi,Sanskrit", "type": "text" },
+                { "key": "profilePhoto", "type": "file", "src": "" },
+                { "key": "aadharCardImage", "type": "file", "src": "" },
+                { "key": "pujaPhotos", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits"]
+            }
+          }
+        },
+        {
+          "name": "Get All Pandits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits"]
+            }
+          }
+        },
+        {
+          "name": "Get Pandit By ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", ":id"],
+              "variable": [{ "key": "id", "value": "PANDIT_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Update Pandit (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Updated Pandit Name", "type": "text" },
+                { "key": "city", "value": "Mumbai", "type": "text" },
+                { "key": "profilePhoto", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", ":id"],
+              "variable": [{ "key": "id", "value": "PANDIT_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Pandit (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", ":id"],
+              "variable": [{ "key": "id", "value": "PANDIT_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle Pandit Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/pandits/:id/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pandits", ":id", "toggle"],
+              "variable": [{ "key": "id", "value": "PANDIT_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pujas",
+      "item": [
+        {
+          "name": "Get Enums",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas/enums",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas", "enums"]
+            }
+          }
+        },
+        {
+          "name": "Create Puja (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Satyanarayan Puja", "type": "text" },
+                { "key": "description", "value": "Puja description here", "type": "text" },
+                { "key": "price", "value": "2500", "type": "text" },
+                { "key": "duration", "value": "2 hours", "type": "text" },
+                { "key": "category", "value": "Griha Pravesh", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas"]
+            }
+          }
+        },
+        {
+          "name": "Get All Pujas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas"]
+            }
+          }
+        },
+        {
+          "name": "Get Puja By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas", ":id"],
+              "variable": [{ "key": "id", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Update Puja (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Updated Puja Name", "type": "text" },
+                { "key": "price", "value": "3000", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas", ":id"],
+              "variable": [{ "key": "id", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Puja (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas", ":id"],
+              "variable": [{ "key": "id", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle Puja Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/pujas/:id/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pujas", ":id", "toggle"],
+              "variable": [{ "key": "id", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pujaId\": \"PUJA_ID_HERE\",\n  \"panditId\": \"PANDIT_ID_HERE\",\n  \"date\": \"2024-12-25\",\n  \"time\": \"10:00 AM\",\n  \"address\": \"123, Main Street, Delhi\",\n  \"notes\": \"Please bring all samagri\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings"]
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings (User)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/my-bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "my-bookings"]
+            }
+          }
+        },
+        {
+          "name": "Get All Bookings (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/admin/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "admin", "all"]
+            }
+          }
+        },
+        {
+          "name": "Update Booking Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"panditId\": \"PANDIT_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/admin/:id/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "admin", ":id", "status"],
+              "variable": [{ "key": "id", "value": "BOOKING_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Create Contact (Public)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ramesh Kumar\",\n  \"email\": \"ramesh@example.com\",\n  \"phone\": \"9876543210\",\n  \"message\": \"I want to book a puja for my new home\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contacts"]
+            }
+          }
+        },
+        {
+          "name": "Get All Contacts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contacts"]
+            }
+          }
+        },
+        {
+          "name": "Get Contact By ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/contacts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contacts", ":id"],
+              "variable": [{ "key": "id", "value": "CONTACT_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Contact (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/contacts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contacts", ":id"],
+              "variable": [{ "key": "id", "value": "CONTACT_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interests",
+      "item": [
+        {
+          "name": "Create Interest (Public)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pujaId\": \"PUJA_ID_HERE\",\n  \"name\": \"Suresh Verma\",\n  \"mobile\": \"9876543210\",\n  \"message\": \"Mujhe ghar pe puja karwani hai\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interests"]
+            }
+          }
+        },
+        {
+          "name": "Get All Interests (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/interests/admin/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interests", "admin", "all"]
+            }
+          }
+        },
+        {
+          "name": "Update Interest (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Contacted\",\n  \"adminNotes\": \"Called and confirmed booking\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interests/admin/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interests", "admin", ":id"],
+              "variable": [{ "key": "id", "value": "INTEREST_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

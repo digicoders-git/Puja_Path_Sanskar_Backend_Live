@@ -1,0 +1,547 @@
+{
+  "info": {
+    "name": "PoojaPath API Collection",
+    "description": "Pooja Path Backend - Saari APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "user_token",
+      "value": "USER_TOKEN_YAHAN_DAALO"
+    },
+    {
+      "key": "admin_token",
+      "value": "ADMIN_TOKEN_YAHAN_DAALO"
+    }
+  ],
+  "item": [
+    {
+      "name": "👤 USER APIs",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/users/send-otp" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP - New User (Register)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/users/verify-otp" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"123456\",\n  \"name\": \"Vivek Raj\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP - Old User (Login)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/users/verify-otp" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/users/" }
+          }
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/users/USER_ID_YAHAN" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"Vivek Updated\",\n  \"mobile\": \"9876543210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/users/USER_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Toggle User Active/Inactive (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/users/USER_ID_YAHAN/toggle" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 ADMIN APIs",
+      "item": [
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/admin/register" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Vivek Admin", "type": "text" },
+                { "key": "email", "value": "vivek@gmail.com", "type": "text" },
+                { "key": "password", "value": "123456", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/admin/login" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"vivek@gmail.com\",\n  \"password\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Admin Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/admin/profile" }
+          }
+        },
+        {
+          "name": "Update Admin Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/admin/profile" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Vivek Updated", "type": "text" },
+                { "key": "email", "value": "vivek@gmail.com", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change Admin Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/admin/change-password" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"oldPassword\": \"123456\",\n  \"newPassword\": \"newpass123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🕉️ PUJA APIs",
+      "item": [
+        {
+          "name": "Get All Pujas (Public)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/pujas/" }
+          }
+        },
+        {
+          "name": "Get Single Puja (Public)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/pujas/PUJA_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Create Puja (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pujas/" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "pujaType", "value": "Ganesh Puja", "type": "text" },
+                { "key": "duration", "value": "2 Hours", "type": "text" },
+                { "key": "description", "value": "Ganesh ji ki puja hai", "type": "text" },
+                { "key": "whatIsIncluded", "value": "Flowers, Prasad, Dhoop", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Puja (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pujas/PUJA_ID_YAHAN" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "pujaType", "value": "Ganesh Puja Updated", "type": "text" },
+                { "key": "duration", "value": "3 Hours", "type": "text" },
+                { "key": "description", "value": "Updated description", "type": "text" },
+                { "key": "whatIsIncluded", "value": "Flowers, Prasad", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Puja (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pujas/PUJA_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Toggle Puja Active/Inactive (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pujas/PUJA_ID_YAHAN/toggle" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🙏 PANDIT APIs",
+      "item": [
+        {
+          "name": "Get All Pandits (Public)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/pandits/" }
+          }
+        },
+        {
+          "name": "Search Pandits (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/pandits/search?city=Indore&specialization=Vivah Expert&minExperience=2&maxExperience=10",
+              "query": [
+                { "key": "city", "value": "Indore" },
+                { "key": "specialization", "value": "Vivah Expert" },
+                { "key": "minExperience", "value": "2" },
+                { "key": "maxExperience", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pandits By Puja (Public)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/pandits/by-puja/PUJA_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Get Pandit Enums (Public)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/pandits/enums" }
+          }
+        },
+        {
+          "name": "Create Pandit (Public)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/pandits/" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "fullName", "value": "Pandit Ramesh Sharma", "type": "text" },
+                { "key": "mobileNumber", "value": "9876543210", "type": "text" },
+                { "key": "alternateNumber", "value": "9876543211", "type": "text" },
+                { "key": "emailId", "value": "ramesh@gmail.com", "type": "text" },
+                { "key": "dob", "value": "1985-01-15", "type": "text" },
+                { "key": "gender", "value": "Male", "type": "text" },
+                { "key": "gotra", "value": "Kashyap", "type": "text" },
+                { "key": "currentAddress", "value": "123 MG Road Indore", "type": "text" },
+                { "key": "permanentAddress", "value": "123 MG Road Indore", "type": "text" },
+                { "key": "city", "value": "Indore", "type": "text" },
+                { "key": "pincode", "value": "452001", "type": "text" },
+                { "key": "latitude", "value": "22.7196", "type": "text" },
+                { "key": "longitude", "value": "75.8577", "type": "text" },
+                { "key": "aadharNumber", "value": "123456789012", "type": "text" },
+                { "key": "panNumber", "value": "ABCDE1234F", "type": "text" },
+                { "key": "videoLink", "value": "https://youtube.com/xyz", "type": "text" },
+                { "key": "socialLink", "value": "https://instagram.com/xyz", "type": "text" },
+                { "key": "totalExperience", "value": "10", "type": "text" },
+                { "key": "trainingGurukul", "value": "Kashi Gurukul", "type": "text" },
+                { "key": "specialization", "value": "Vivah Expert", "type": "text" },
+                { "key": "vedaSpecialization", "value": "Rigveda", "type": "text" },
+                { "key": "shakha", "value": "Shakha Name", "type": "text" },
+                { "key": "languagesKnown", "value": "Hindi, Sanskrit", "type": "text" },
+                { "key": "selectedPujas", "value": "[{\"puja\": \"PUJA_ID_YAHAN\", \"price\": 1100}]", "type": "text" },
+                { "key": "pujaKitProvided", "value": "Customer provides everything", "type": "text" },
+                { "key": "mantraLevel", "value": "Expert (Sanskrit Scholar)", "type": "text" },
+                { "key": "timeDiscipline", "value": "Very Punctual (Strict)", "type": "text" },
+                { "key": "dressCode", "value": "Full Vedic Attire (Dhoti/Kurta)", "type": "text" },
+                { "key": "eventHandling", "value": "Unlimited (Large Gatherings)", "type": "text" },
+                { "key": "bhajanKirtan", "value": "true", "type": "text" },
+                { "key": "astrology", "value": "false", "type": "text" },
+                { "key": "vastu", "value": "false", "type": "text" },
+                { "key": "havan", "value": "true", "type": "text" },
+                { "key": "corporateExperience", "value": "false", "type": "text" },
+                { "key": "onlinePujaSupport", "value": "true", "type": "text" },
+                { "key": "availableCities", "value": "Indore, Bhopal", "type": "text" },
+                { "key": "travelWillingness", "value": "Yes", "type": "text" },
+                { "key": "maxDistance", "value": "50", "type": "text" },
+                { "key": "availabilityType", "value": "Full-time", "type": "text" },
+                { "key": "availableDays", "value": "Monday to Saturday", "type": "text" },
+                { "key": "emergencyBooking", "value": "true", "type": "text" },
+                { "key": "upiId", "value": "ramesh@upi", "type": "text" },
+                { "key": "bankDetails", "value": "SBI 123456789", "type": "text" },
+                { "key": "referenceName", "value": "Suresh Sharma", "type": "text" },
+                { "key": "referenceContact", "value": "9876543212", "type": "text" },
+                { "key": "declaration", "value": "true", "type": "text" },
+                { "key": "profilePhoto", "type": "file", "src": "" },
+                { "key": "aadharCardImage", "type": "file", "src": "" },
+                { "key": "pujaPhotos", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Pandit (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pandits/PANDIT_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Update Pandit (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pandits/PANDIT_ID_YAHAN" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "fullName", "value": "Pandit Ramesh Updated", "type": "text" },
+                { "key": "city", "value": "Bhopal", "type": "text" },
+                { "key": "profilePhoto", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Pandit (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pandits/PANDIT_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Toggle Pandit Active/Inactive (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/pandits/PANDIT_ID_YAHAN/toggle" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 BOOKING APIs",
+      "item": [
+        {
+          "name": "Create Booking (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{user_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/bookings/" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"pujaId\": \"PUJA_ID_YAHAN\",\n  \"panditId\": \"PANDIT_ID_YAHAN\",\n  \"bookingDate\": \"2026-06-01\",\n  \"timeSlot\": \"10:00 AM\",\n  \"address\": \"123 MG Road Indore\",\n  \"amount\": 1100,\n  \"specialInstructions\": \"Ghar pe aana hai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings (User)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/bookings/my-bookings" }
+          }
+        },
+        {
+          "name": "Get All Bookings (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/bookings/admin/all" }
+          }
+        },
+        {
+          "name": "Update Booking Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/bookings/admin/BOOKING_ID_YAHAN/status" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"status\": \"Confirmed\",\n  \"paymentStatus\": \"Paid\",\n  \"panditId\": \"PANDIT_ID_YAHAN\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💡 INTEREST APIs",
+      "item": [
+        {
+          "name": "Submit Interest (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{user_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/interests/" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"pujaId\": \"PUJA_ID_YAHAN\",\n  \"name\": \"Vivek Raj\",\n  \"mobile\": \"9876543210\",\n  \"message\": \"Mujhe Ganesh Puja karwani hai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Interests (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/interests/admin/all" }
+          }
+        },
+        {
+          "name": "Update Interest Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/interests/admin/INTEREST_ID_YAHAN" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"status\": \"Contacted\",\n  \"adminNotes\": \"Call kiya, interested hai\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📞 CONTACT APIs",
+      "item": [
+        {
+          "name": "Submit Contact Form (Public)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/contacts/" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"fullName\": \"Vivek Raj\",\n  \"phone\": \"9876543210\",\n  \"email\": \"vivek@gmail.com\",\n  \"subject\": \"Puja Booking Query\",\n  \"message\": \"Mujhe puja ke baare mein jaankari chahiye\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Contacts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/contacts/" }
+          }
+        },
+        {
+          "name": "Get Single Contact (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/contacts/CONTACT_ID_YAHAN" }
+          }
+        },
+        {
+          "name": "Delete Contact (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/contacts/CONTACT_ID_YAHAN" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 DASHBOARD API",
+      "item": [
+        {
+          "name": "Get Dashboard (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/dashboard/" }
+          }
+        }
+      ]
+    }
+  ]
+}
