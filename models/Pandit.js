@@ -33,7 +33,7 @@ const panditSchema = mongoose.Schema(
     panCard: { type: String, default: "" },
     trainingGurukul: { type: String, default: "" },
     basicPujaCharges: { type: String, default: "" },
-    akhandPaathCharges: { type: String, default: "" },
+    akhandPathCharges: { type: String, default: "" },
     perDayCharges: { type: String, default: "" },
     travelCharges: { type: String, default: "" },
     mantraLevel: { type: String, default: "" },

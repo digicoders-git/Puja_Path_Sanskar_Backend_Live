@@ -19,7 +19,7 @@ async function test() {
     formData.append("vedaSpecialization", "Rigveda");
     formData.append("languagesKnown", "Hindi, Sanskrit");
     formData.append("basicPujaCharges", 1100);
-    formData.append("akhandPaathCharges", 5100);
+    formData.append("akhandPathCharges", 5100);
     formData.append("perDayCharges", 2100);
     formData.append("travelCharges", "Included in Puja");
     formData.append("availableCities", "Delhi NCR");

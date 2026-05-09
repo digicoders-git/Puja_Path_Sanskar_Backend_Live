@@ -61,7 +61,7 @@ const createPandit = async (req, res) => {
 
       // 6. Puja Services & Pricing
       basicPujaCharges: req.body.basicPujaCharges || "",
-      akhandPaathCharges: req.body.akhandPaathCharges || "",
+      akhandPathCharges: req.body.akhandPathCharges || "",
       perDayCharges: req.body.perDayCharges || "",
       travelCharges: req.body.travelCharges || "",
 
@@ -183,7 +183,7 @@ const updatePandit = async (req, res) => {
       "fullName", "mobileNumber", "whatsappNumber", "alternateNumber", "emailId", "dob", "gender",
       "state", "city", "district", "currentAddress", "permanentAddress", "pincode",
       "aadharNumber", "panCard", "experience", "trainingGurukul",
-      "basicPujaCharges", "akhandPaathCharges", "perDayCharges", "travelCharges",
+      "basicPujaCharges", "akhandPathCharges", "perDayCharges", "travelCharges",
       "mantraLevel", "timeDiscipline", "dressCode", "eventHandling", "traditionalDress", "audioClarity",
       "travelWillingness", "maxDistance", "serviceArea", "travelAvailability",
       "availabilityType", "emergencyBooking", "bankUpiDetails", "bankDetails", "samagriArrangement", "samagriExperience",
