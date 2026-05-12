@@ -1,12 +1,20 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const fs = require("fs");
 
 dotenv.config();
 connectDB();
 
 const app = express();
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -36,7 +44,6 @@ app.use(cors({
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
