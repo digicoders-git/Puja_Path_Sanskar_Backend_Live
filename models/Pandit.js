@@ -20,6 +20,12 @@ const panditSchema = mongoose.Schema(
     samagriExperience: { type: String, required: true }, // Basic Setup, Full Setup, No
     travelAvailability: { type: String, required: true }, // Only Local Area, Entire District, Other States Also
     liveEventExperience: { type: [String], required: true }, // Jagran, Bhagwat Katha, etc.
+    selectedPujas: [
+      {
+        puja: { type: mongoose.Schema.Types.ObjectId, ref: "Puja" },
+        price: { type: Number, default: 0 }
+      }
+    ],
 
     // --- OTHER OPTIONAL FIELDS (STEP 2+) ---
     alternateNumber: { type: String, default: "" },

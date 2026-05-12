@@ -109,6 +109,7 @@ const createPandit = async (req, res) => {
       introVideo: req.files?.introVideo ? req.files.introVideo[0].path : "",
       pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => f.path) : [],
       pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => f.path) : [],
+      selectedPujas: parseJson(req.body.selectedPujas),
     };
 
     const pandit = await Pandit.create(panditData);
@@ -194,7 +195,7 @@ const updatePandit = async (req, res) => {
       if (req.body[f] !== undefined) pandit[f] = req.body[f];
     });
 
-    const jsonFields = ["specializations", "languages", "liveEventExperience", "availableCities", "availableDays"];
+    const jsonFields = ["specializations", "languages", "liveEventExperience", "availableCities", "availableDays", "selectedPujas"];
     jsonFields.forEach(f => {
       if (req.body[f] !== undefined) pandit[f] = parseJson(req.body[f]);
     });

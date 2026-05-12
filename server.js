@@ -10,7 +10,11 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://127.0.0.1:3000",
   "https://pujapathsanskar.com",
   "https://www.pujapathsanskar.com",
   "https://puja-path-sanskar-website-live.vercel.app",
@@ -30,7 +34,8 @@ app.use(cors({
 }));
 
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
