@@ -35,7 +35,7 @@ const createPandit = async (req, res) => {
       mobileNumber: req.body.mobileNumber,
       whatsappNumber: req.body.whatsappNumber || "",
       alternateNumber: req.body.alternateNumber || "",
-      emailId: req.body.emailId || "",
+      emailId: req.body.emailId ? req.body.emailId.toLowerCase() : undefined,
       dob: req.body.dob || "",
       gender: req.body.gender || "",
 
@@ -192,7 +192,13 @@ const updatePandit = async (req, res) => {
     ];
 
     textFields.forEach(f => {
-      if (req.body[f] !== undefined) pandit[f] = req.body[f];
+      if (req.body[f] !== undefined) {
+        if (f === "emailId" && !req.body[f]) {
+          pandit[f] = undefined;
+        } else {
+          pandit[f] = req.body[f];
+        }
+      }
     });
 
     const jsonFields = ["specializations", "languages", "liveEventExperience", "availableCities", "availableDays", "selectedPujas"];

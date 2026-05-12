@@ -29,7 +29,7 @@ const panditSchema = mongoose.Schema(
 
     // --- OTHER OPTIONAL FIELDS (STEP 2+) ---
     alternateNumber: { type: String, default: "" },
-    emailId: { type: String, default: "" },
+    emailId: { type: String, unique: true, sparse: true },
     dob: { type: String, default: "" },
     gender: { type: String, default: "" },
     currentAddress: { type: String, default: "" },
