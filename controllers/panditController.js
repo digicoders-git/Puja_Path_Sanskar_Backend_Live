@@ -35,7 +35,7 @@ const createPandit = async (req, res) => {
       mobileNumber: req.body.mobileNumber,
       whatsappNumber: req.body.whatsappNumber || "",
       alternateNumber: req.body.alternateNumber || "",
-      emailId: req.body.emailId ? req.body.emailId.toLowerCase() : undefined,
+      emailId: (req.body.emailId && req.body.emailId !== "" && req.body.emailId !== "null") ? req.body.emailId.toLowerCase().trim() : undefined,
       dob: req.body.dob || "",
       gender: req.body.gender || "",
 
@@ -193,8 +193,12 @@ const updatePandit = async (req, res) => {
 
     textFields.forEach(f => {
       if (req.body[f] !== undefined) {
-        if (f === "emailId" && !req.body[f]) {
-          pandit[f] = undefined;
+        if (f === "emailId") {
+          if (!req.body[f] || req.body[f] === "" || req.body[f] === "null") {
+            pandit[f] = undefined;
+          } else {
+            pandit[f] = req.body[f].toLowerCase().trim();
+          }
         } else {
           pandit[f] = req.body[f];
         }
