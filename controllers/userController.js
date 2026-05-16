@@ -82,6 +82,39 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+// Get My Profile (User)
+const getMyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id || req.user._id).select("-__v");
+    if (!user) return res.status(404).json({ message: "User not found", success: false });
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Update My Profile (User)
+const updateMyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id || req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found", success: false });
+
+    const { name, mobile } = req.body;
+    if (name) user.name = name;
+    if (mobile) {
+      if (!/^[0-9]{10}$/.test(mobile)) {
+        return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye", success: false });
+      }
+      user.mobile = mobile;
+    }
+
+    const updatedUser = await user.save();
+    res.status(200).json({ success: true, message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: error.message, success: false });
+  }
+};
+
 // Get all users for Admin
 const getAllUsers = async (req, res) => {
   try {
@@ -139,6 +172,8 @@ const toggleUserStatus = async (req, res) => {
 module.exports = {
   sendOtp,
   verifyOtp,
+  getMyProfile,
+  updateMyProfile,
   getAllUsers,
   updateUser,
   deleteUser,

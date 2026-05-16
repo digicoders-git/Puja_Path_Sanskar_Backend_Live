@@ -1,11 +1,11 @@
 const express = require("express");
 const { getAllPujaTypes, createPujaType, deletePujaType } = require("../controllers/pujaTypeController");
-const { Auth } = require("../middleware/authMiddleware");
+const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 router.get("/", getAllPujaTypes);
-router.post("/", Auth, createPujaType);
-router.delete("/:id", Auth, deletePujaType);
+router.post("/", Auth, adminOnly, createPujaType);
+router.delete("/:id", Auth, adminOnly, deletePujaType);
 
 module.exports = router;

@@ -6,21 +6,9 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5000",
-      "type": "string"
-    },
-    {
-      "key": "adminToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "userToken",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "userToken", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -137,7 +125,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"9876543210\"\n}"
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/send-otp",
@@ -147,7 +135,7 @@
           }
         },
         {
-          "name": "Verify OTP",
+          "name": "Verify OTP (Existing User - Login)",
           "event": [
             {
               "listen": "test",
@@ -165,12 +153,71 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/verify-otp",
               "host": ["{{baseUrl}}"],
               "path": ["api", "users", "verify-otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP (New User - Register)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if(res.token) pm.collectionVariables.set('userToken', res.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"123456\",\n  \"name\": \"Ramesh Kumar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "verify-otp"]
+            }
+          }
+        },
+        {
+          "name": "Get My Profile (User)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update My Profile (User)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ramesh Kumar\",\n  \"mobile\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "profile"]
             }
           }
         },
@@ -238,64 +285,96 @@
       "name": "Pandits",
       "item": [
         {
-          "name": "Get Enums",
+          "name": "Get Active Pandits (Public)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/pandits/enums",
+              "raw": "{{baseUrl}}/api/pandits/active",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "pandits", "enums"]
+              "path": ["api", "pandits", "active"]
             }
           }
         },
         {
-          "name": "Search Pandits",
+          "name": "Search Pandits (Public)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/pandits/search?name=sharma&city=delhi",
+              "raw": "{{baseUrl}}/api/pandits/search?city=Delhi&specialization=Satyanarayan",
               "host": ["{{baseUrl}}"],
               "path": ["api", "pandits", "search"],
               "query": [
-                { "key": "name", "value": "sharma" },
-                { "key": "city", "value": "delhi" }
+                { "key": "city", "value": "Delhi" },
+                { "key": "specialization", "value": "Satyanarayan" }
               ]
             }
           }
         },
         {
-          "name": "Get Pandits By Puja",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/pandits/by-puja/:pujaId",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "pandits", "by-puja", ":pujaId"],
-              "variable": [{ "key": "pujaId", "value": "PUJA_ID_HERE" }]
-            }
-          }
-        },
-        {
-          "name": "Create Pandit",
+          "name": "Create Pandit (Public)",
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "name", "value": "Pandit Ramesh Sharma", "type": "text" },
-                { "key": "phone", "value": "9876543210", "type": "text" },
-                { "key": "email", "value": "pandit@example.com", "type": "text" },
-                { "key": "city", "value": "Delhi", "type": "text" },
+                { "key": "fullName", "value": "Pandit Ramesh Sharma", "type": "text" },
+                { "key": "mobileNumber", "value": "9876543210", "type": "text" },
+                { "key": "whatsappNumber", "value": "9876543210", "type": "text" },
+                { "key": "alternateNumber", "value": "", "type": "text" },
+                { "key": "emailId", "value": "pandit@example.com", "type": "text" },
+                { "key": "dob", "value": "1985-06-15", "type": "text" },
+                { "key": "gender", "value": "Male", "type": "text" },
+                { "key": "state", "value": "Delhi", "type": "text" },
+                { "key": "city", "value": "New Delhi", "type": "text" },
+                { "key": "district", "value": "Central Delhi", "type": "text" },
+                { "key": "currentAddress", "value": "123, Main Street, Delhi", "type": "text" },
+                { "key": "permanentAddress", "value": "123, Main Street, Delhi", "type": "text" },
+                { "key": "pincode", "value": "110001", "type": "text" },
+                { "key": "aadharNumber", "value": "1234-5678-9012", "type": "text" },
+                { "key": "panCard", "value": "ABCDE1234F", "type": "text" },
                 { "key": "experience", "value": "10", "type": "text" },
-                { "key": "specialization", "value": "Satyanarayan Puja", "type": "text" },
-                { "key": "languages", "value": "Hindi,Sanskrit", "type": "text" },
+                { "key": "trainingGurukul", "value": "Kashi Vidyapeeth", "type": "text" },
+                { "key": "specializations", "value": "[\"Satyanarayan Puja\",\"Griha Pravesh\"]", "type": "text" },
+                { "key": "languages", "value": "[\"Hindi\",\"Sanskrit\"]", "type": "text" },
+                { "key": "selectedPujas", "value": "[\"PUJA_ID_1\",\"PUJA_ID_2\"]", "type": "text" },
+                { "key": "basicPujaCharges", "value": "2500", "type": "text" },
+                { "key": "akhandPathCharges", "value": "5000", "type": "text" },
+                { "key": "perDayCharges", "value": "3000", "type": "text" },
+                { "key": "travelCharges", "value": "500", "type": "text" },
+                { "key": "mantraLevel", "value": "Expert", "type": "text" },
+                { "key": "timeDiscipline", "value": "Punctual", "type": "text" },
+                { "key": "dressCode", "value": "Traditional", "type": "text" },
+                { "key": "eventHandling", "value": "Experienced", "type": "text" },
+                { "key": "traditionalDress", "value": "Dhoti-Kurta", "type": "text" },
+                { "key": "audioClarity", "value": "Clear", "type": "text" },
+                { "key": "bhajanKirtan", "value": "true", "type": "text" },
+                { "key": "astrology", "value": "false", "type": "text" },
+                { "key": "vastu", "value": "false", "type": "text" },
+                { "key": "havan", "value": "true", "type": "text" },
+                { "key": "corporateExperience", "value": "false", "type": "text" },
+                { "key": "liveEventExperience", "value": "[\"Wedding\",\"Housewarming\"]", "type": "text" },
+                { "key": "availableCities", "value": "[\"Delhi\",\"Noida\",\"Gurgaon\"]", "type": "text" },
+                { "key": "travelWillingness", "value": "Yes", "type": "text" },
+                { "key": "maxDistance", "value": "50 km", "type": "text" },
+                { "key": "serviceArea", "value": "NCR", "type": "text" },
+                { "key": "travelAvailability", "value": "Weekends", "type": "text" },
+                { "key": "availabilityType", "value": "Full-time", "type": "text" },
+                { "key": "availableDays", "value": "[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"]", "type": "text" },
+                { "key": "emergencyBooking", "value": "Yes", "type": "text" },
+                { "key": "bankUpiDetails", "value": "pandit@upi", "type": "text" },
+                { "key": "bankDetails", "value": "SBI - 1234567890", "type": "text" },
+                { "key": "samagriArrangement", "value": "Self", "type": "text" },
+                { "key": "samagriExperience", "value": "Yes", "type": "text" },
+                { "key": "mediaPermission", "value": "Yes", "type": "text" },
+                { "key": "declaration", "value": "true", "type": "text" },
                 { "key": "profilePhoto", "type": "file", "src": "" },
-                { "key": "aadharCardImage", "type": "file", "src": "" },
-                { "key": "pujaPhotos", "type": "file", "src": "" }
+                { "key": "idProof", "type": "file", "src": "" },
+                { "key": "introVideo", "type": "file", "src": "" },
+                { "key": "pujaPhotos", "type": "file", "src": "" },
+                { "key": "pujaVideoClips", "type": "file", "src": "" }
               ]
             },
             "url": {
@@ -306,10 +385,10 @@
           }
         },
         {
-          "name": "Get All Pandits",
+          "name": "Get All Pandits (Admin)",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/pandits",
               "host": ["{{baseUrl}}"],
@@ -338,8 +417,11 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "name", "value": "Updated Pandit Name", "type": "text" },
+                { "key": "fullName", "value": "Updated Pandit Name", "type": "text" },
                 { "key": "city", "value": "Mumbai", "type": "text" },
+                { "key": "experience", "value": "12", "type": "text" },
+                { "key": "specializations", "value": "[\"Satyanarayan Puja\",\"Ganesh Puja\"]", "type": "text" },
+                { "key": "languages", "value": "[\"Hindi\",\"Marathi\"]", "type": "text" },
                 { "key": "profilePhoto", "type": "file", "src": "" }
               ]
             },
@@ -402,11 +484,12 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "name", "value": "Satyanarayan Puja", "type": "text" },
-                { "key": "description", "value": "Puja description here", "type": "text" },
-                { "key": "price", "value": "2500", "type": "text" },
+                { "key": "pujaName", "value": "Satyanarayan Puja", "type": "text" },
+                { "key": "pujaType", "value": "PUJA_TYPE_ID_HERE", "type": "text" },
                 { "key": "duration", "value": "2 hours", "type": "text" },
-                { "key": "category", "value": "Griha Pravesh", "type": "text" },
+                { "key": "description", "value": "Detailed description of the puja", "type": "text" },
+                { "key": "whatIsIncluded", "value": "Samagri, Pandit, Prasad", "type": "text" },
+                { "key": "basePrice", "value": "2500", "type": "text" },
                 { "key": "image", "type": "file", "src": "" }
               ]
             },
@@ -418,7 +501,7 @@
           }
         },
         {
-          "name": "Get All Pujas",
+          "name": "Get All Pujas (Public)",
           "request": {
             "method": "GET",
             "header": [],
@@ -430,7 +513,7 @@
           }
         },
         {
-          "name": "Get Puja By ID",
+          "name": "Get Puja By ID (Public)",
           "request": {
             "method": "GET",
             "header": [],
@@ -450,8 +533,12 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "name", "value": "Updated Puja Name", "type": "text" },
-                { "key": "price", "value": "3000", "type": "text" },
+                { "key": "pujaName", "value": "Updated Puja Name", "type": "text" },
+                { "key": "pujaType", "value": "PUJA_TYPE_ID_HERE", "type": "text" },
+                { "key": "basePrice", "value": "3000", "type": "text" },
+                { "key": "duration", "value": "3 hours", "type": "text" },
+                { "key": "description", "value": "Updated description", "type": "text" },
+                { "key": "whatIsIncluded", "value": "Samagri, Pandit, Prasad, Flowers", "type": "text" },
                 { "key": "image", "type": "file", "src": "" }
               ]
             },
@@ -492,27 +579,57 @@
       ]
     },
     {
-      "name": "Bookings",
+      "name": "Puja Types",
       "item": [
         {
-          "name": "Create Booking (User)",
+          "name": "Get All Puja Types (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/puja-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "puja-types"]
+            }
+          }
+        },
+        {
+          "name": "Create Puja Type (Admin)",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pujaId\": \"PUJA_ID_HERE\",\n  \"panditId\": \"PANDIT_ID_HERE\",\n  \"date\": \"2024-12-25\",\n  \"time\": \"10:00 AM\",\n  \"address\": \"123, Main Street, Delhi\",\n  \"notes\": \"Please bring all samagri\"\n}"
+              "raw": "{\n  \"name\": \"Griha Pravesh\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/bookings",
+              "raw": "{{baseUrl}}/api/puja-types",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "bookings"]
+              "path": ["api", "puja-types"]
             }
           }
         },
+        {
+          "name": "Delete Puja Type (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/puja-types/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "puja-types", ":id"],
+              "variable": [{ "key": "id", "value": "PUJA_TYPE_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
         {
           "name": "Get My Bookings (User)",
           "request": {
@@ -547,13 +664,202 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"confirmed\",\n  \"panditId\": \"PANDIT_ID_HERE\"\n}"
+              "raw": "{\n  \"status\": \"Confirmed\",\n  \"paymentStatus\": \"AdvancePaid\",\n  \"panditId\": \"PANDIT_ID_HERE\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/bookings/admin/:id/status",
               "host": ["{{baseUrl}}"],
               "path": ["api", "bookings", "admin", ":id", "status"],
               "variable": [{ "key": "id", "value": "BOOKING_ID_HERE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment (Razorpay Flow)",
+      "item": [
+        {
+          "name": "Step 1 - Create Booking + Razorpay Order (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pujaId\": \"PUJA_ID_HERE\",\n  \"panditId\": \"PANDIT_ID_HERE\",\n  \"bookingDate\": \"2026-06-15\",\n  \"timeSlot\": \"10:00 AM\",\n  \"address\": \"123, Main Street, Delhi\",\n  \"amount\": 2500,\n  \"specialInstructions\": \"Please bring all samagri\",\n  \"offerId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/create-booking",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "create-booking"]
+            }
+          }
+        },
+        {
+          "name": "Step 2 - Verify 25% Advance Payment (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"order_XXXXXXXXXX\",\n  \"razorpayPaymentId\": \"pay_XXXXXXXXXX\",\n  \"razorpaySignature\": \"SIGNATURE_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Step 3 - Pay Remaining 75% Amount (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/remaining/:bookingId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "remaining", ":bookingId"],
+              "variable": [{ "key": "bookingId", "value": "BOOKING_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Step 4 - Verify Remaining 75% Payment (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"order_XXXXXXXXXX\",\n  \"razorpayPaymentId\": \"pay_XXXXXXXXXX\",\n  \"razorpaySignature\": \"SIGNATURE_HERE\",\n  \"bookingId\": \"BOOKING_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/verify-remaining",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "verify-remaining"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "Get All Active Offers (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers"]
+            }
+          }
+        },
+        {
+          "name": "Get Offers By Puja (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/puja/:pujaId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", "puja", ":pujaId"],
+              "variable": [{ "key": "pujaId", "value": "PUJA_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Create Offer (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Diwali Special 20% Off\",\n  \"description\": \"Get 20% off on all pujas this Diwali\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 20,\n  \"applicableTo\": \"all\",\n  \"pujas\": [],\n  \"minAmount\": 1000,\n  \"priority\": 1,\n  \"startDate\": \"2026-10-01\",\n  \"endDate\": \"2026-11-05\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/offers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers"]
+            }
+          }
+        },
+        {
+          "name": "Get All Offers Admin (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/admin/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", "admin", "all"]
+            }
+          }
+        },
+        {
+          "name": "Update Offer (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Offer Title\",\n  \"discountValue\": 25,\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", ":id"],
+              "variable": [{ "key": "id", "value": "OFFER_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle Offer Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/:id/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", ":id", "toggle"],
+              "variable": [{ "key": "id", "value": "OFFER_ID_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Offer (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", ":id"],
+              "variable": [{ "key": "id", "value": "OFFER_ID_HERE" }]
             }
           }
         }

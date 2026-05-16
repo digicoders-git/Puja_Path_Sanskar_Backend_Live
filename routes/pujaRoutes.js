@@ -4,7 +4,7 @@ const {
   createPuja, getAllPujas, getPujaById,
   updatePuja, deletePuja, togglePuja, getEnums,
 } = require("../controllers/pujaController");
-const { Auth } = require("../middleware/authMiddleware");
+const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -21,11 +21,11 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.get("/enums", getEnums);
-router.post("/", Auth, upload.single("image"), createPuja);
+router.post("/", Auth, adminOnly, upload.single("image"), createPuja);
 router.get("/", getAllPujas);                                  // Public
 router.get("/:id", getPujaById);                              // Public
-router.put("/:id", Auth, upload.single("image"), updatePuja);
-router.delete("/:id", Auth, deletePuja);
-router.patch("/:id/toggle", Auth, togglePuja);
+router.put("/:id", Auth, adminOnly, upload.single("image"), updatePuja);
+router.delete("/:id", Auth, adminOnly, deletePuja);
+router.patch("/:id/toggle", Auth, adminOnly, togglePuja);
 
 module.exports = router;
