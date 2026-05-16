@@ -1,44 +1,43 @@
 const jwt = require("jsonwebtoken");
 
 const Auth = (req, res, next) => {
-  let token;
+  const authHeader = req.headers.authorization || req.headers.Authorization;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      req.user = decoded; // Naya standard: req.user
-      req.admin = decoded; // Purane controllers ko support karne ke liye
-
-      return next();
-    } catch (error) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
-    }
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token provided", success: false });
   }
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+  const token = authHeader.split(" ")[1];
+
+  if (!token || token === "null" || token === "undefined") {
+    return res.status(401).json({ message: "Not authorized, invalid token", success: false });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = decoded; // Standard: req.user
+    req.admin = decoded; // Legacy support: req.admin
+
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: "Not authorized, token failed or expired", success: false });
   }
 };
 
 const adminOnly = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
-    next();
+    return next();
   } else {
-    res.status(403).json({ message: "Access denied. Admin only." });
+    return res.status(403).json({ message: "Access denied. Admin only.", success: false });
   }
 };
 
 const userOnly = (req, res, next) => {
   if (req.user && req.user.role === "user") {
-    next();
+    return next();
   } else {
-    res.status(403).json({ message: "Access denied. User only." });
+    return res.status(403).json({ message: "Access denied. User only.", success: false });
   }
 };
 

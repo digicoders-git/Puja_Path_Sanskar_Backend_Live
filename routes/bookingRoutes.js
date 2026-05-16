@@ -4,12 +4,12 @@ const {
   getAllBookings,
   updateBookingStatus,
 } = require("../controllers/bookingController");
-const { Auth, adminOnly } = require("../middleware/authMiddleware");
+const { Auth, adminOnly, userOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 // User Routes
-router.get("/my-bookings", Auth, getUserBookings);
+router.get("/my-bookings", Auth, userOnly, getUserBookings);
 
 // Admin Routes
 router.get("/admin/all", Auth, adminOnly, getAllBookings);
