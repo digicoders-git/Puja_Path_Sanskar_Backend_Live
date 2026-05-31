@@ -10,7 +10,7 @@ const createPuja = async (req, res) => {
       description: req.body.description,
       whatIsIncluded: req.body.whatIsIncluded,
       basePrice: req.body.basePrice || 0,
-      image: req.file ? req.file.path : "",
+      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
     });
     res.status(201).json(puja);
   } catch (error) {
@@ -47,7 +47,7 @@ const updatePuja = async (req, res) => {
 
     const fields = ["pujaName", "pujaType", "duration", "description", "whatIsIncluded", "basePrice"];
     fields.forEach((f) => { if (req.body[f] !== undefined) puja[f] = req.body[f]; });
-    if (req.file) puja.image = req.file.path;
+    if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
 
     const updated = await puja.save();
     res.json(updated);
