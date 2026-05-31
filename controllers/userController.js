@@ -99,9 +99,12 @@ const updateMyProfile = async (req, res) => {
     const user = await User.findById(req.user.id || req.user._id);
     if (!user) return res.status(404).json({ message: "User not found", success: false });
 
-    const { name, mobile } = req.body;
-    if (name) user.name = name;
-    if (mobile) {
+    const { name, mobile, email, dateOfBirth, gender } = req.body;
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (gender !== undefined) user.gender = gender;
+    if (mobile !== undefined) {
       if (!/^[0-9]{10}$/.test(mobile)) {
         return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye", success: false });
       }
@@ -128,12 +131,15 @@ const getAllUsers = async (req, res) => {
 // Update User
 const updateUser = async (req, res) => {
   try {
-    const { name, mobile } = req.body;
+    const { name, mobile, email, dateOfBirth, gender } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found", success: false });
 
-    if (name) user.name = name;
-    if (mobile) user.mobile = mobile;
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (gender !== undefined) user.gender = gender;
+    if (mobile !== undefined) user.mobile = mobile;
 
     const updatedUser = await user.save();
     res.json({ message: "User updated successfully", success: true, user: updatedUser });

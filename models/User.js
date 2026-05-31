@@ -11,6 +11,18 @@ const userSchema = mongoose.Schema(
       unique: true,
       match: [/^[0-9]{10}$/, "Mobile number 10 digits ka hona chahiye"],
     },
+    email: {
+      type: String,
+      default: "",
+    },
+    dateOfBirth: {
+      type: String,
+      default: "",
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
     role: {
       type: String,
       default: "user",
