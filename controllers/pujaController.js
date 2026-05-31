@@ -19,11 +19,22 @@ const createPuja = async (req, res) => {
   }
 };
 
+// Helper to format image URL
+const formatImageUrl = (image) => {
+  if (!image) return "";
+  if (image.startsWith("http")) return image;
+  return `https://api.pujapathsanskar.com/${image.replace(/\\/g, "/")}`;
+};
+
 // Get All Pujas
 const getAllPujas = async (req, res) => {
   try {
     const pujas = await Puja.find().sort({ createdAt: -1 });
-    res.json(pujas);
+    const formattedPujas = pujas.map(puja => ({
+      ...puja._doc,
+      image: formatImageUrl(puja.image)
+    }));
+    res.json(formattedPujas);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -34,7 +45,12 @@ const getPujaById = async (req, res) => {
   try {
     const puja = await Puja.findById(req.params.id);
     if (!puja) return res.status(404).json({ message: "Puja not found" });
-    res.json(puja);
+    
+    const formattedPuja = {
+      ...puja._doc,
+      image: formatImageUrl(puja.image)
+    };
+    res.json(formattedPuja);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
