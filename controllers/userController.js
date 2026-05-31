@@ -107,7 +107,7 @@ const updateMyProfile = async (req, res) => {
     
     // Image handling
     if (req.file) {
-      user.profileImage = `/uploads/${req.file.filename}`;
+      user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
     }
 
     if (mobile !== undefined) {
