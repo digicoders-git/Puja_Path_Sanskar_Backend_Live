@@ -40,6 +40,20 @@ const getAllPujas = async (req, res) => {
   }
 };
 
+// Get Trending Pujas
+const getTrendingPujas = async (req, res) => {
+  try {
+    const pujas = await Puja.find({ isTrending: true, isActive: true }).sort({ createdAt: -1 });
+    const formattedPujas = pujas.map(puja => ({
+      ...puja._doc,
+      image: formatImageUrl(puja.image)
+    }));
+    res.json(formattedPujas);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get Single Puja
 const getPujaById = async (req, res) => {
   try {
@@ -121,4 +135,4 @@ const getEnums = (req, res) => {
   res.json({});
 };
 
-module.exports = { createPuja, getAllPujas, getPujaById, updatePuja, deletePuja, togglePuja, toggleTrendingPuja, getEnums };
+module.exports = { createPuja, getAllPujas, getTrendingPujas, getPujaById, updatePuja, deletePuja, togglePuja, toggleTrendingPuja, getEnums };
