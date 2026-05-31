@@ -104,6 +104,12 @@ const updateMyProfile = async (req, res) => {
     if (email !== undefined) user.email = email;
     if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
     if (gender !== undefined) user.gender = gender;
+    
+    // Image handling
+    if (req.file) {
+      user.profileImage = `/uploads/${req.file.filename}`;
+    }
+
     if (mobile !== undefined) {
       if (!/^[0-9]{10}$/.test(mobile)) {
         return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye", success: false });

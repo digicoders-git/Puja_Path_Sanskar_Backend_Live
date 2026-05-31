@@ -1,14 +1,21 @@
 const express = require("express");
+const multer = require("multer");
 const { sendOtp, verifyOtp, getMyProfile, updateMyProfile, getAllUsers } = require("../controllers/userController");
 const { Auth, adminOnly, userOnly } = require("../middleware/authMiddleware");
 const router = express.Router();
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+});
+const upload = multer({ storage });
 
 router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
 
 // User Profile Routes (requires user token)
 router.get("/profile", Auth, userOnly, getMyProfile);
-router.put("/profile", Auth, userOnly, updateMyProfile);
+router.put("/profile", Auth, userOnly, upload.single("profileImage"), updateMyProfile);
 
 // Admin Routes (requires admin token)
 router.get("/", Auth, adminOnly, getAllUsers);
