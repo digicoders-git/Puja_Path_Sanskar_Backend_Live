@@ -104,11 +104,11 @@ const createPandit = async (req, res) => {
       declaration: req.body.declaration === "true" || req.body.declaration === true,
 
       // Files
-      idProof: req.files?.idProof ? req.files.idProof[0].path : "",
-      profilePhoto: req.files?.profilePhoto ? req.files.profilePhoto[0].path : "",
-      introVideo: req.files?.introVideo ? req.files.introVideo[0].path : "",
-      pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => f.path) : [],
-      pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => f.path) : [],
+      idProof: req.files?.idProof ? `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}` : "",
+      profilePhoto: req.files?.profilePhoto ? `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}` : "",
+      introVideo: req.files?.introVideo ? `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}` : "",
+      pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
+      pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
       selectedPujas: parseJson(req.body.selectedPujas),
     };
 
@@ -123,11 +123,30 @@ const createPandit = async (req, res) => {
   }
 };
 
+// Helper to format image/video URL
+const formatMediaUrl = (media) => {
+  if (!media) return "";
+  if (media.startsWith("http")) return media;
+  return `https://api.pujapathsanskar.com/${media.replace(/\\/g, "/")}`;
+};
+
+const formatPanditMedia = (pandit) => {
+  const p = pandit._doc ? pandit._doc : pandit;
+  return {
+    ...p,
+    idProof: formatMediaUrl(p.idProof),
+    profilePhoto: formatMediaUrl(p.profilePhoto),
+    introVideo: formatMediaUrl(p.introVideo),
+    pujaPhotos: p.pujaPhotos ? p.pujaPhotos.map(formatMediaUrl) : [],
+    pujaVideoClips: p.pujaVideoClips ? p.pujaVideoClips.map(formatMediaUrl) : [],
+  };
+};
+
 // Get All Pandits (Admin only)
 const getAllPandits = async (req, res) => {
   try {
     const pandits = await Pandit.find().sort({ createdAt: -1 });
-    res.json(pandits);
+    res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -137,7 +156,7 @@ const getAllPandits = async (req, res) => {
 const getActivePandits = async (req, res) => {
   try {
     const pandits = await Pandit.find({ isActive: true }).sort({ createdAt: -1 });
-    res.json(pandits);
+    res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -151,7 +170,7 @@ const searchPandits = async (req, res) => {
     if (city) query.city = new RegExp(city, "i");
     if (specialization) query.specializations = { $in: [new RegExp(specialization, "i")] };
     const pandits = await Pandit.find(query).sort({ createdAt: -1 });
-    res.json(pandits);
+    res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -162,7 +181,7 @@ const getPanditById = async (req, res) => {
   try {
     const pandit = await Pandit.findById(req.params.id);
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
-    res.json(pandit);
+    res.json(formatPanditMedia(pandit));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -217,11 +236,11 @@ const updatePandit = async (req, res) => {
       }
     });
 
-    if (req.files?.idProof) pandit.idProof = req.files.idProof[0].path;
-    if (req.files?.profilePhoto) pandit.profilePhoto = req.files.profilePhoto[0].path;
-    if (req.files?.introVideo) pandit.introVideo = req.files.introVideo[0].path;
-    if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => f.path);
-    if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => f.path);
+    if (req.files?.idProof) pandit.idProof = `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}`;
+    if (req.files?.profilePhoto) pandit.profilePhoto = `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}`;
+    if (req.files?.introVideo) pandit.introVideo = `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}`;
+    if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
+    if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
 
     const updated = await pandit.save();
     res.json(updated);

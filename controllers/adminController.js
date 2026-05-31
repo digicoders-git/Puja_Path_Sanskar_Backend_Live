@@ -22,7 +22,7 @@ const registerAdmin = async (req, res) => {
       name,
       email,
       password,
-      image: req.file ? req.file.path : "",
+      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
     });
 
     if (admin) {
@@ -105,7 +105,7 @@ const updateAdminProfile = async (req, res) => {
       admin.email = req.body.email || admin.email;
       
       if (req.file) {
-        admin.image = req.file.path;
+        admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
       }
 
       const updatedAdmin = await admin.save();
