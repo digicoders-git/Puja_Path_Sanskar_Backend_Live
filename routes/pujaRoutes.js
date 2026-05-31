@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const {
   createPuja, getAllPujas, getPujaById,
-  updatePuja, deletePuja, togglePuja, getEnums,
+  updatePuja, deletePuja, togglePuja, toggleTrendingPuja, getEnums,
 } = require("../controllers/pujaController");
 const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
@@ -27,5 +27,6 @@ router.get("/:id", getPujaById);                              // Public
 router.put("/:id", Auth, adminOnly, upload.single("image"), updatePuja);
 router.delete("/:id", Auth, adminOnly, deletePuja);
 router.patch("/:id/toggle", Auth, adminOnly, togglePuja);
+router.patch("/:id/trending", Auth, adminOnly, toggleTrendingPuja);
 
 module.exports = router;

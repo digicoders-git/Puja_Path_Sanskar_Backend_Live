@@ -10,6 +10,7 @@ const pujaSchema = mongoose.Schema(
     basePrice: { type: String, default: "0" },
     image: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
+    isTrending: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

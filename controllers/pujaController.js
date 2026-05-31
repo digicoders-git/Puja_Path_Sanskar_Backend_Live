@@ -11,6 +11,7 @@ const createPuja = async (req, res) => {
       whatIsIncluded: req.body.whatIsIncluded,
       basePrice: req.body.basePrice || 0,
       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      isTrending: req.body.isTrending === "true" || req.body.isTrending === true,
     });
     res.status(201).json(puja);
   } catch (error) {
@@ -47,6 +48,11 @@ const updatePuja = async (req, res) => {
 
     const fields = ["pujaName", "pujaType", "duration", "description", "whatIsIncluded", "basePrice"];
     fields.forEach((f) => { if (req.body[f] !== undefined) puja[f] = req.body[f]; });
+    
+    if (req.body.isTrending !== undefined) {
+      puja.isTrending = req.body.isTrending === "true" || req.body.isTrending === true;
+    }
+    
     if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
 
     const updated = await puja.save();
@@ -81,9 +87,22 @@ const togglePuja = async (req, res) => {
   }
 };
 
+// Toggle Trending
+const toggleTrendingPuja = async (req, res) => {
+  try {
+    const puja = await Puja.findById(req.params.id);
+    if (!puja) return res.status(404).json({ message: "Puja not found" });
+    puja.isTrending = !puja.isTrending;
+    await puja.save();
+    res.json({ message: `Puja ${puja.isTrending ? "marked as trending" : "removed from trending"}`, isTrending: puja.isTrending });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get Enums
 const getEnums = (req, res) => {
   res.json({});
 };
 
-module.exports = { createPuja, getAllPujas, getPujaById, updatePuja, deletePuja, togglePuja, getEnums };
+module.exports = { createPuja, getAllPujas, getPujaById, updatePuja, deletePuja, togglePuja, toggleTrendingPuja, getEnums };
