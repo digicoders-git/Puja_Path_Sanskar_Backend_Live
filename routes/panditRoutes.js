@@ -11,6 +11,7 @@ const {
   togglePandit,
   getActivePandits,
   searchPandits,
+  addPanditReview,
 } = require("../controllers/panditController");
 const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
@@ -48,6 +49,7 @@ const handleUpload = (req, res, next) => {
 
 // Pandit Routes
 router.post("/", handleUpload, createPandit);
+router.post("/:id/reviews", Auth, upload.single("image"), addPanditReview);
 router.get("/active", getActivePandits); // Public route
 router.get("/search", searchPandits); // Public search route
 router.get("/", Auth, adminOnly, getAllPandits);

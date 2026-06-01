@@ -1,5 +1,12 @@
 const mongoose = require("mongoose");
 
+const reviewSchema = mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  comment: { type: String, required: true },
+  image: { type: String, default: "" }
+}, { timestamps: true });
+
 const panditSchema = mongoose.Schema(
   {
     // --- STEP 1: 14 IMPORTANT POINTS (MANDATORY EXCEPT UPI) ---
@@ -66,6 +73,9 @@ const panditSchema = mongoose.Schema(
     mediaPermission: { type: String, default: "" },
     declaration: { type: Boolean, default: false },
     isActive: { type: Boolean, default: false },
+    reviews: [reviewSchema],
+    averageRating: { type: Number, default: 0 },
+    totalReviews: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

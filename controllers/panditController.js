@@ -274,6 +274,41 @@ const togglePandit = async (req, res) => {
   }
 };
 
+// Add Review to Pandit
+const addPanditReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!rating || !comment) {
+      return res.status(400).json({ message: "Rating and comment are required" });
+    }
+
+    const pandit = await Pandit.findById(req.params.id);
+    if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+
+    const review = {
+      user: req.user.id || req.user._id,
+      rating: Number(rating),
+      comment,
+      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+    };
+
+    if (!pandit.reviews) pandit.reviews = [];
+    pandit.reviews.push(review);
+
+    const totalReviews = pandit.reviews.length;
+    const avg = pandit.reviews.reduce((acc, item) => item.rating + acc, 0) / totalReviews;
+    pandit.averageRating = parseFloat(avg.toFixed(1));
+    pandit.totalReviews = totalReviews;
+
+    const updatedPandit = await pandit.save();
+    
+    // Repopulate user info for returning if needed, but returning success is enough
+    res.status(201).json({ message: "Review added successfully", pandit: formatPanditMedia(updatedPandit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   sendOTP,
   verifyOTP,
@@ -285,4 +320,5 @@ module.exports = {
   togglePandit,
   getActivePandits,
   searchPandits,
+  addPanditReview,
 };
