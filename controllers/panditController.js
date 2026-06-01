@@ -146,7 +146,11 @@ const formatPanditMedia = (pandit) => {
 const getAllPandits = async (req, res) => {
   try {
     let query = {};
-    if (req.query.pujaId) query["selectedPujas.puja"] = req.query.pujaId;
+    if (req.query.pujaId) {
+      const mongoose = require('mongoose');
+      const pId = mongoose.isValidObjectId(req.query.pujaId) ? new mongoose.Types.ObjectId(req.query.pujaId) : req.query.pujaId;
+      query.selectedPujas = { $elemMatch: { puja: pId } };
+    }
     
     const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
@@ -159,7 +163,11 @@ const getAllPandits = async (req, res) => {
 const getActivePandits = async (req, res) => {
   try {
     let query = { isActive: true };
-    if (req.query.pujaId) query["selectedPujas.puja"] = req.query.pujaId;
+    if (req.query.pujaId) {
+      const mongoose = require('mongoose');
+      const pId = mongoose.isValidObjectId(req.query.pujaId) ? new mongoose.Types.ObjectId(req.query.pujaId) : req.query.pujaId;
+      query.selectedPujas = { $elemMatch: { puja: pId } };
+    }
     
     const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
@@ -175,7 +183,11 @@ const searchPandits = async (req, res) => {
     let query = { isActive: true };
     if (city) query.city = new RegExp(city, "i");
     if (specialization) query.specializations = { $in: [new RegExp(specialization, "i")] };
-    if (pujaId) query["selectedPujas.puja"] = pujaId;
+    if (pujaId) {
+      const mongoose = require('mongoose');
+      const pId = mongoose.isValidObjectId(pujaId) ? new mongoose.Types.ObjectId(pujaId) : pujaId;
+      query.selectedPujas = { $elemMatch: { puja: pId } };
+    }
     
     const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
