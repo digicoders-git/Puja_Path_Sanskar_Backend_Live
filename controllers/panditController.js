@@ -145,7 +145,10 @@ const formatPanditMedia = (pandit) => {
 // Get All Pandits (Admin only)
 const getAllPandits = async (req, res) => {
   try {
-    const pandits = await Pandit.find().sort({ createdAt: -1 });
+    let query = {};
+    if (req.query.pujaId) query["selectedPujas.puja"] = req.query.pujaId;
+    
+    const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -155,7 +158,10 @@ const getAllPandits = async (req, res) => {
 // Get Active Pandits
 const getActivePandits = async (req, res) => {
   try {
-    const pandits = await Pandit.find({ isActive: true }).sort({ createdAt: -1 });
+    let query = { isActive: true };
+    if (req.query.pujaId) query["selectedPujas.puja"] = req.query.pujaId;
+    
+    const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -165,10 +171,12 @@ const getActivePandits = async (req, res) => {
 // Search Pandits
 const searchPandits = async (req, res) => {
   try {
-    const { city, specialization } = req.query;
+    const { city, specialization, pujaId } = req.query;
     let query = { isActive: true };
     if (city) query.city = new RegExp(city, "i");
     if (specialization) query.specializations = { $in: [new RegExp(specialization, "i")] };
+    if (pujaId) query["selectedPujas.puja"] = pujaId;
+    
     const pandits = await Pandit.find(query).sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
