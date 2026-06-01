@@ -9,6 +9,10 @@ const createPuja = async (req, res) => {
       duration: req.body.duration,
       description: req.body.description,
       whatIsIncluded: req.body.whatIsIncluded,
+      shortDescription: req.body.shortDescription,
+      benefits: req.body.benefits,
+      requiredMaterials: req.body.requiredMaterials,
+      auspiciousTime: req.body.auspiciousTime,
       basePrice: req.body.basePrice || 0,
       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
       isTrending: req.body.isTrending === "true" || req.body.isTrending === true,
@@ -76,7 +80,7 @@ const updatePuja = async (req, res) => {
     const puja = await Puja.findById(req.params.id);
     if (!puja) return res.status(404).json({ message: "Puja not found" });
 
-    const fields = ["pujaName", "pujaType", "duration", "description", "whatIsIncluded", "basePrice"];
+    const fields = ["pujaName", "pujaType", "duration", "description", "whatIsIncluded", "basePrice", "shortDescription", "benefits", "requiredMaterials", "auspiciousTime"];
     fields.forEach((f) => { if (req.body[f] !== undefined) puja[f] = req.body[f]; });
     
     if (req.body.isTrending !== undefined) {
