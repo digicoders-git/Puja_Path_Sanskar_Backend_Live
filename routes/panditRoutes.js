@@ -53,7 +53,7 @@ router.post("/:id/reviews", Auth, upload.single("image"), addPanditReview);
 router.get("/active", getActivePandits); // Public route
 router.get("/search", searchPandits); // Public search route
 router.get("/", Auth, adminOnly, getAllPandits);
-router.get("/:id", Auth, adminOnly, getPanditById);
+router.get("/:id", getPanditById); // Public route
 router.put("/:id", Auth, adminOnly, handleUpload, updatePandit);
 router.delete("/:id", Auth, adminOnly, deletePandit);
 router.patch("/:id/toggle", Auth, adminOnly, togglePandit);
