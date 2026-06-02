@@ -43,16 +43,34 @@ async function testBookings() {
     const pujaId = pujaData[0]._id;
     console.log(`   Found Puja: ${pujaData[0].pujaName} (${pujaId})`);
 
+    console.log("\n2.5 Creating User Address...");
+    const addrRes = await fetch(`${API}/addresses/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        type: 'Home',
+        houseFlatNo: 'Flat 101, Gokul Society',
+        streetArea: 'Sector 4, Rohini',
+        city: 'New Delhi',
+        state: 'Delhi',
+        pincode: '110085'
+      })
+    });
+    const addrData = await addrRes.json();
+    if (!addrData.success) throw new Error("Failed to create address");
+    const addressId = addrData.address._id;
+    console.log(`   Created address with ID: ${addressId}`);
+
     console.log("\n--- TESTING POST /api/bookings/ (Create Booking) ---");
     const bookRes = await fetch(`${API}/bookings/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
       body: JSON.stringify({
         pujaId,
-        bookingDate: '2026-05-01',
+        bookingDate: '2026-06-02',
         timeSlot: 'Morning (8AM - 12PM)',
-        address: '123 Test St, Test City',
-        amount: 2100,
+        addressId,
+        samagriOption: 'Basic',
         specialInstructions: 'Bring extra samagri'
       })
     });

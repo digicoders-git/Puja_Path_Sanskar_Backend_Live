@@ -1,5 +1,6 @@
 const express = require("express");
 const {
+  createBooking,
   getUserBookings,
   getAllBookings,
   updateBookingStatus,
@@ -9,6 +10,7 @@ const { Auth, adminOnly, userOnly } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 // User Routes
+router.post("/", Auth, userOnly, createBooking);
 router.get("/my-bookings", Auth, userOnly, getUserBookings);
 
 // Admin Routes

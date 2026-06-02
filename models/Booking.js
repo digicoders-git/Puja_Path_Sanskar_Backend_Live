@@ -25,6 +25,11 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    samagriOption: {
+      type: String,
+      enum: ["None", "Basic", "Premium"],
+      default: "None",
+    },
     address: {
       type: String,
       required: true,
