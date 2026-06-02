@@ -61,6 +61,7 @@ app.use("/api/interests", require("./routes/interestRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/offers", require("./routes/offerRoutes"));
 app.use("/api/puja-types", require("./routes/pujaTypeRoutes"));
+app.use("/api/addresses", require("./routes/addressRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
