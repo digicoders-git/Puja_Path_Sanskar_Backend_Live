@@ -152,7 +152,7 @@ const getAllPandits = async (req, res) => {
       query.selectedPujas = { $elemMatch: { puja: pId } };
     }
     
-    const pandits = await Pandit.find(query).sort({ createdAt: -1 });
+    const pandits = await Pandit.find(query).populate("selectedPujas.puja").sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -169,7 +169,7 @@ const getActivePandits = async (req, res) => {
       query.selectedPujas = { $elemMatch: { puja: pId } };
     }
     
-    const pandits = await Pandit.find(query).sort({ createdAt: -1 });
+    const pandits = await Pandit.find(query).populate("selectedPujas.puja").sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -189,7 +189,7 @@ const searchPandits = async (req, res) => {
       query.selectedPujas = { $elemMatch: { puja: pId } };
     }
     
-    const pandits = await Pandit.find(query).sort({ createdAt: -1 });
+    const pandits = await Pandit.find(query).populate("selectedPujas.puja").sort({ createdAt: -1 });
     res.json(pandits.map(formatPanditMedia));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -199,7 +199,7 @@ const searchPandits = async (req, res) => {
 // Get Single Pandit
 const getPanditById = async (req, res) => {
   try {
-    const pandit = await Pandit.findById(req.params.id);
+    const pandit = await Pandit.findById(req.params.id).populate("selectedPujas.puja");
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
     res.json(formatPanditMedia(pandit));
   } catch (error) {
