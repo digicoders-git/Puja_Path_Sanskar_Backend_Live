@@ -76,7 +76,7 @@ const createBooking = async (req, res) => {
 const getUserBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user.id || req.user._id })
-      .populate("puja", "pujaType image priceRange")
+      .populate("puja", "pujaName pujaType image priceRange")
       .populate("pandit", "fullName mobileNumber")
       .sort({ createdAt: -1 });
 
@@ -91,7 +91,7 @@ const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate("user", "name mobile")
-      .populate("puja", "pujaType")
+      .populate("puja", "pujaName pujaType")
       .populate("pandit", "fullName mobileNumber")
       .populate("offer", "title discountType discountValue")
       .sort({ createdAt: -1 });

@@ -41,7 +41,7 @@ const getAllOffers = async (req, res) => {
       startDate: { $lte: now },
       endDate: { $gte: now },
     })
-      .populate("pujas", "pujaType image")
+      .populate("pujas", "pujaName pujaType image")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: offers.length, offers });
@@ -54,7 +54,7 @@ const getAllOffers = async (req, res) => {
 const getAllOffersAdmin = async (req, res) => {
   try {
     const offers = await Offer.find()
-      .populate("pujas", "pujaType image")
+      .populate("pujas", "pujaName pujaType image")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: offers.length, offers });

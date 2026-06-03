@@ -37,7 +37,7 @@ const createInterest = async (req, res) => {
 const getAllInterests = async (req, res) => {
   try {
     const interests = await Interest.find()
-      .populate("puja", "pujaType image")
+      .populate("puja", "pujaName pujaType image")
       .populate("user", "name mobile")
       .sort({ createdAt: -1 });
 
