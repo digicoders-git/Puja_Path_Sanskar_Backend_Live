@@ -52,6 +52,46 @@ const astrologerSchema = new mongoose.Schema(
     },
     description: {
       type: String,
+    },
+    bio: {
+      type: String,
+    },
+    location: {
+      type: String,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    consultationModes: {
+      type: [String],
+      default: ["Chat", "Voice Call", "Video Call"]
+    },
+    services: [
+      {
+        name: String,
+        icon: String
+      }
+    ],
+    plans: [
+      {
+        title: String,
+        duration: Number,
+        price: Number,
+        description: String,
+        features: [String],
+        isPopular: { type: Boolean, default: false },
+        isBest: { type: Boolean, default: false },
+        color: { type: String, default: "0xFFE65100" } // App requires color
+      }
+    ],
+    availability: {
+      days: {
+        type: [String],
+        default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+      },
+      startTime: { type: String, default: "09:00 AM" },
+      endTime: { type: String, default: "09:00 PM" }
     }
   },
   {

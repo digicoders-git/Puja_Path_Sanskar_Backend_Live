@@ -58,12 +58,14 @@ app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/interests", require("./routes/interestRoutes"));
+app.use("/api/astrology", require("./routes/astrologyRoutes"));
 app.use("/api/astrologers", require("./routes/astrologerRoutes"));
 app.use("/api/consultations", require("./routes/consultationRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/offers", require("./routes/offerRoutes"));
 app.use("/api/puja-types", require("./routes/pujaTypeRoutes"));
 app.use("/api/addresses", require("./routes/addressRoutes"));
+app.use("/api/astrology", require("./routes/astrologyRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
