@@ -7,6 +7,7 @@ const client = new OAuth2Client("335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.a
 const generateToken = (id) => {
   return jwt.sign({ id, role: "user" }, process.env.JWT_SECRET, {
     expiresIn: "30d",
+    
   });
 };
 
