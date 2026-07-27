@@ -83,19 +83,19 @@ exports.getDailyHoroscope = async (req, res) => {
     // 2. Fetch from Prokerala
     const data = await prokeralaService.fetchDailyHoroscope(sign);
 
-    // Prokerala response parsing
-    // Standard Prokerala v2 Horoscope structure:
-    const predictionText = data?.data?.daily_prediction?.prediction || 'आज का राशिफल उपलब्ध नहीं है।';
+    // Prokerala advanced horoscope response parsing
+    const dailyData = data?.data?.daily_predictions?.[0]?.predictions || [];
+    const getPred = (type) => dailyData.find(p => p.type === type)?.prediction || '';
+
+    const predictionText = getPred('General') || data?.data?.daily_prediction?.prediction || 'आज का राशिफल उपलब्ध नहीं है।';
     const prediction = {
       date: today,
       description: predictionText,
-      // Prokerala's basic daily endpoint doesn't provide these fields separately,
-      // so we provide motivational defaults or derived strings.
       positive: 'सकारात्मक सोचें और आगे बढ़ें।',
       negative: 'जल्दबाजी से बचें।',
-      career: 'अपने कार्य पर ध्यान केंद्रित करें।',
-      love: 'अपनों के साथ समय बिताएं।',
-      health: 'स्वास्थ्य का ध्यान रखें।',
+      career: getPred('Career') || 'अपने कार्य पर ध्यान केंद्रित करें।',
+      love: getPred('Love') || 'अपनों के साथ समय बिताएं।',
+      health: getPred('Health') || 'स्वास्थ्य का ध्यान रखें।',
       luckyColor: 'सफेद',
       luckyNumber: [3]
     };

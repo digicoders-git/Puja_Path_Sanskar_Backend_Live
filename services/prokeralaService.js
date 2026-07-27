@@ -64,8 +64,8 @@ const getAccessToken = async () => {
 const fetchDailyHoroscope = async (sign, datetime = new Date().toISOString().split('.')[0] + 'Z') => {
   const token = await getAccessToken();
   try {
-    const response = await axios.get(`${BASE_URL}/horoscope/daily`, {
-      params: { sign, datetime },
+    const response = await axios.get(`${BASE_URL}/horoscope/daily/advanced`, {
+      params: { sign, datetime, type: 'all' },
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
