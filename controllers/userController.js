@@ -1,5 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client("335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com");
 
 // Generate JWT
 const generateToken = (id) => {
@@ -79,6 +81,60 @@ const verifyOtp = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Google Login
+const googleLogin = async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) {
+    return res.status(400).json({ message: "Google ID Token is required", success: false });
+  }
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: idToken,
+      audience: "335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com",
+    });
+    
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Check if user already exists
+    let user = await User.findOne({ googleId });
+    let isNewUser = false;
+
+    if (!user) {
+      user = await User.findOne({ email });
+      if (user) {
+        user.googleId = googleId;
+        user.name = user.name || name;
+        user.profileImage = user.profileImage || picture;
+        await user.save();
+      } else {
+        user = await User.create({
+          googleId,
+          email,
+          name,
+          profileImage: picture,
+          isActive: true
+        });
+        isNewUser = true;
+      }
+    }
+
+    res.status(200).json({
+      message: isNewUser ? "Registration successful" : "Login successful",
+      success: true,
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      profileImage: user.profileImage,
+      token: generateToken(user._id),
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Invalid Google Token or Server Error", error: error.message, success: false });
   }
 };
 
@@ -188,6 +244,6 @@ module.exports = {
   updateMyProfile,
   getAllUsers,
   updateUser,
-  deleteUser,
   toggleUserStatus,
+  googleLogin,
 };
