@@ -245,6 +245,7 @@ module.exports = {
   updateMyProfile,
   getAllUsers,
   updateUser,
+  deleteUser,
   toggleUserStatus,
   googleLogin,
 };
