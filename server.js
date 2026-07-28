@@ -65,7 +65,10 @@ app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/offers", require("./routes/offerRoutes"));
 app.use("/api/puja-types", require("./routes/pujaTypeRoutes"));
 app.use("/api/addresses", require("./routes/addressRoutes"));
-app.use("/api/astrology", require("./routes/astrologyRoutes"));
+app.use("/api/horoscope", require("./routes/horoscope.routes"));
+
+// Initialize Cron Jobs
+require("./cron/horoscope.cron");
 
 const PORT = process.env.PORT || 5000;
 

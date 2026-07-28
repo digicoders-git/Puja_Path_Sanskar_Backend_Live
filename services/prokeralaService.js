@@ -66,7 +66,7 @@ const fetchDailyHoroscope = async (sign, datetime = new Date().toISOString().spl
   try {
     const response = await axios.get(`${BASE_URL}/horoscope/daily/advanced`, {
       params: { sign, datetime, type: 'all' },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'hi' }
     });
     return response.data;
   } catch (error) {
@@ -85,7 +85,7 @@ const fetchDailyTarot = async (sign) => {
   try {
     const response = await axios.get(`${BASE_URL}/tarot/daily`, {
       params: { sign },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'hi' }
     });
     return response.data;
   } catch (error) {
@@ -106,7 +106,7 @@ const fetchPanchang = async (datetime, coordinates, ayanamsa = 1) => {
   try {
     const response = await axios.get(`${BASE_URL}/astrology/panchang/advanced`, {
       params: { datetime, coordinates, ayanamsa },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'hi' }
     });
     return response.data;
   } catch (error) {
@@ -127,7 +127,7 @@ const fetchKundli = async (datetime, coordinates, ayanamsa = 1) => {
   try {
     const response = await axios.get(`${BASE_URL}/astrology/kundli/advanced`, {
       params: { datetime, coordinates, ayanamsa },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'hi' }
     });
     return response.data;
   } catch (error) {
