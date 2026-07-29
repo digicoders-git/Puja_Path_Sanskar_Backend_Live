@@ -23,6 +23,9 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
   "http://127.0.0.1:3000",
+  "http://192.168.29.34:5173",
+  "http://192.168.29.34:5174",
+  "http://192.168.29.34:3000",
   "https://pujapathsanskar.com",
   "https://www.pujapathsanskar.com",
   "https://puja-path-sanskar-website-live.vercel.app",
@@ -69,6 +72,7 @@ app.use("/api/horoscope", require("./routes/horoscope.routes"));
 
 // Initialize Cron Jobs
 require("./cron/horoscope.cron");
+require("./cron/rashiNotificationJob").startNotificationJob();
 
 const PORT = process.env.PORT || 5000;
 

@@ -156,14 +156,17 @@ const updateMyProfile = async (req, res) => {
     const user = await User.findById(req.user.id || req.user._id);
     if (!user) return res.status(404).json({ message: "User not found", success: false });
 
-    const { name, mobile, email, dateOfBirth, gender } = req.body;
+    const { name, mobile, email, dateOfBirth, gender, fcmToken, rashi } = req.body;
     if (name !== undefined) user.name = name;
     if (email !== undefined) user.email = email;
     if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
     if (gender !== undefined) user.gender = gender;
+    if (fcmToken !== undefined) user.fcmToken = fcmToken;
+    if (rashi !== undefined) user.rashi = rashi;
     
     // Image handling
     if (req.file) {
+//       user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
       user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
     }
 

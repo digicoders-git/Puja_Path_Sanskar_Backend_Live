@@ -21,7 +21,8 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
           const filepath = path.join(__dirname, 'uploads', filename);
           
           fs.writeFileSync(filepath, data);
-          const newUrl = `https://api.pujapathsanskar.com/uploads/${filename}`;
+//           const newUrl = `https://api.pujapathsanskar.com/uploads/${filename}`;
+          const newUrl = `http://192.168.29.34:5000/uploads/${filename}`;
           
           astrologer.image = newUrl;
           await astrologer.save();

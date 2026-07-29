@@ -7,6 +7,7 @@ const {
   getAdminProfile,
   changePassword,
   updateAdminProfile,
+  sendPushNotification,
 } = require("../controllers/adminController");
 const { Auth, adminOnly } = require("../middleware/authMiddleware");
 const router = express.Router();
@@ -28,5 +29,6 @@ router.post("/login", loginAdmin);
 router.get("/profile", Auth, adminOnly, getAdminProfile);
 router.put("/profile", Auth, adminOnly, upload.single("image"), updateAdminProfile);
 router.put("/change-password", Auth, adminOnly, changePassword);
+router.post("/send-notification", Auth, adminOnly, sendPushNotification);
 
 module.exports = router;

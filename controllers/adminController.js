@@ -22,6 +22,7 @@ const registerAdmin = async (req, res) => {
       name,
       email,
       password,
+//       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
     });
 
@@ -105,6 +106,7 @@ const updateAdminProfile = async (req, res) => {
       admin.email = req.body.email || admin.email;
       
       if (req.file) {
+//         admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
         admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
       }
 
@@ -124,10 +126,55 @@ const updateAdminProfile = async (req, res) => {
   }
 };
 
+const adminFirebase = require("firebase-admin");
+const User = require("../models/User");
+
+const sendPushNotification = async (req, res) => {
+  const { title, body } = req.body;
+
+  if (!title || !body) {
+    return res.status(400).json({ message: "Title and body are required." });
+  }
+
+  try {
+    const users = await User.find({
+      fcmToken: { $exists: true, $ne: "" }
+    });
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users with FCM tokens found." });
+    }
+
+    const tokens = users.map(user => user.fcmToken);
+    
+    // We can send multicast up to 500 tokens per batch
+    const message = {
+      notification: {
+        title,
+        body
+      },
+      tokens: tokens
+    };
+
+    const response = await adminFirebase.messaging().sendEachForMulticast(message);
+    
+    res.json({
+      success: true,
+      message: "Notifications sent successfully.",
+      successCount: response.successCount,
+      failureCount: response.failureCount
+    });
+  } catch (error) {
+    console.error("Send Push Notification Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   registerAdmin,
   loginAdmin,
   getAdminProfile,
   changePassword,
   updateAdminProfile,
+  sendPushNotification,
 };

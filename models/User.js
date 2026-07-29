@@ -40,6 +40,14 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    fcmToken: {
+      type: String,
+      default: "",
+    },
+    rashi: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
