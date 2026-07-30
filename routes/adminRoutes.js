@@ -8,6 +8,7 @@ const {
   changePassword,
   updateAdminProfile,
   sendPushNotification,
+  triggerDailyRashiNotifications,
 } = require("../controllers/adminController");
 const { Auth, adminOnly } = require("../middleware/authMiddleware");
 const router = express.Router();
@@ -29,6 +30,7 @@ router.post("/login", loginAdmin);
 router.get("/profile", Auth, adminOnly, getAdminProfile);
 router.put("/profile", Auth, adminOnly, upload.single("image"), updateAdminProfile);
 router.put("/change-password", Auth, adminOnly, changePassword);
-router.post("/send-notification", Auth, adminOnly, sendPushNotification);
+router.post("/send-notification", Auth, adminOnly, upload.single("image"), sendPushNotification);
+router.post("/trigger-rashi-notifications", Auth, adminOnly, triggerDailyRashiNotifications);
 
 module.exports = router;

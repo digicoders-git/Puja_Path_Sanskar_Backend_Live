@@ -10,12 +10,12 @@ const localUrl = "http://192.168.29.234:5000";
 function replaceInFile(filePath) {
     if (fs.existsSync(filePath)) {
         let content = fs.readFileSync(filePath, 'utf8');
-        if (content.includes(localUrl)) {
-            // Replace localUrl with liveUrl
-            const regex = new RegExp(localUrl.replace(/\//g, '\\/'), 'g');
-            const newContent = content.replace(regex, liveUrl);
+        if (content.includes(liveUrl)) {
+            // Replace liveUrl with localUrl
+            const regex = new RegExp(liveUrl.replace(/\//g, '\\/'), 'g');
+            const newContent = content.replace(regex, localUrl);
             fs.writeFileSync(filePath, newContent, 'utf8');
-            console.log(`Reverted URLs in ${filePath}`);
+            console.log(`Replaced URLs in ${filePath}`);
         }
     }
 }

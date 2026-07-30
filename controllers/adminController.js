@@ -22,8 +22,8 @@ const registerAdmin = async (req, res) => {
       name,
       email,
       password,
-//       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
-      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      //       image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
+      image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
     });
 
     if (admin) {
@@ -104,10 +104,10 @@ const updateAdminProfile = async (req, res) => {
     if (admin) {
       admin.name = req.body.name || admin.name;
       admin.email = req.body.email || admin.email;
-      
+
       if (req.file) {
-//         admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-        admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+        //         admin.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
+        admin.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
       }
 
       const updatedAdmin = await admin.save();
@@ -126,46 +126,102 @@ const updateAdminProfile = async (req, res) => {
   }
 };
 
-const adminFirebase = require("firebase-admin");
+const { getMessaging } = require("firebase-admin/messaging");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
+
+// Ensure firebase is initialized
+require("../config/firebase");
 
 const sendPushNotification = async (req, res) => {
-  const { title, body } = req.body;
+  const { title, body, userId, category } = req.body;
+  const messaging = require("firebase-admin/messaging").getMessaging();
 
   if (!title || !body) {
     return res.status(400).json({ message: "Title and body are required." });
   }
 
   try {
-    const users = await User.find({
-      fcmToken: { $exists: true, $ne: "" }
-    });
+    let tokens = [];
+    let notificationType = category || 'general';
 
-    if (users.length === 0) {
-      return res.status(404).json({ message: "No users with FCM tokens found." });
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = "/uploads/" + req.file.filename;
     }
 
-    const tokens = users.map(user => user.fcmToken);
-    
-    // We can send multicast up to 500 tokens per batch
-    const message = {
-      notification: {
+    // Determine the users to send to
+    if (userId && userId !== 'all') {
+      const user = await User.findById(userId);
+      if (user && user.fcmToken) {
+        tokens.push(user.fcmToken);
+      }
+      
+      await Notification.create({
+        userId: user._id,
         title,
-        body
-      },
-      tokens: tokens
-    };
+        body,
+        type: notificationType,
+        imageUrl: imageUrl
+      });
+    } else {
+      const users = await User.find({ fcmToken: { $exists: true, $ne: "" } });
+      tokens = users.map(user => user.fcmToken);
+      
+      await Notification.create({
+        userId: null,
+        title,
+        body,
+        type: notificationType,
+        imageUrl: imageUrl
+      });
+    }
 
-    const response = await adminFirebase.messaging().sendEachForMulticast(message);
-    
-    res.json({
+    if (tokens.length === 0) {
+      return res.status(400).json({ success: false, message: "No valid FCM tokens found for the selected user(s)." });
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    if (tokens.length === 1) {
+      const message = {
+        notification: { title, body, ...(imageUrl && { image: imageUrl }) },
+        android: { priority: "high" },
+        data: { type: notificationType, ...(imageUrl && { imageUrl: imageUrl }) },
+        token: tokens[0]
+      };
+      await messaging.send(message);
+      successCount = 1;
+    } else {
+      const message = {
+        notification: { title, body, ...(imageUrl && { image: imageUrl }) },
+        android: { priority: "high" },
+        data: { type: notificationType, ...(imageUrl && { imageUrl: imageUrl }) },
+        tokens: tokens
+      };
+      const response = await messaging.sendEachForMulticast(message);
+      successCount = response.successCount;
+      failureCount = response.failureCount;
+    }
+    return res.status(200).json({
       success: true,
-      message: "Notifications sent successfully.",
-      successCount: response.successCount,
-      failureCount: response.failureCount
+      message: "Notification sent and saved.",
+      successCount,
+      failureCount
     });
   } catch (error) {
     console.error("Send Push Notification Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const triggerDailyRashiNotifications = async (req, res) => {
+  try {
+    const { sendDailyNotifications } = require("../cron/rashiNotificationJob");
+    await sendDailyNotifications();
+    res.json({ success: true, message: "Daily Rashi Notifications triggered successfully. Check server console for details." });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -177,4 +233,5 @@ module.exports = {
   changePassword,
   updateAdminProfile,
   sendPushNotification,
+  triggerDailyRashiNotifications,
 };

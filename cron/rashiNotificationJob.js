@@ -1,41 +1,32 @@
-const admin = require('firebase-admin');
+const { getMessaging } = require("firebase-admin/messaging");
+require('../config/firebase');
 const cron = require('node-cron');
 const path = require('path');
 const User = require('../models/User');
-
-// Initialize Firebase Admin
-try {
-  const serviceAccount = require(path.join(__dirname, '../config/firebase-service-account.json'));
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-  console.log("Firebase Admin initialized successfully.");
-} catch (error) {
-  console.error("Firebase Admin initialization failed. Ensure firebase-service-account.json exists in config folder.", error.message);
-}
+const Notification = require('../models/Notification');
 
 // Function to generate daily Rashi text based on sign
 function getDailyRashiMessage(name, rashi) {
     const messages = {
-        'aries': 'Mesh rashi walo ke liye aaj ka din naye avsar layega.',
-        'taurus': 'Vrishabha rashi walo ke liye aaj dhan laabh ka yog hai.',
-        'gemini': 'Mithun rashi walo ko aaj naye mitron se milne ka avsar milega.',
-        'cancer': 'Kark rashi walo ke liye aaj ka din shantipurna rahega.',
-        'leo': 'Singh rashi walo ko aaj karyakshetra mein safalta milegi.',
-        'virgo': 'Kanya rashi walo ko aaj apni sehat ka dhyan rakhna chahiye.',
-        'libra': 'Tula rashi walo ke liye aaj ka din parivar ke sath achha beetyga.',
-        'scorpio': 'Vrishchik rashi walo ko aaj aarthik laabh hone ki sambhavna hai.',
-        'sagittarius': 'Dhanu rashi walo ko aaj yatra se laabh ho sakta hai.',
-        'capricorn': 'Makar rashi walo ko aaj mehnat ka fal milega.',
-        'aquarius': 'Kumbh rashi walo ke liye aaj ka din srijanatmak (creative) rahega.',
-        'pisces': 'Meen rashi walo ko aaj adhyatmik shanti ka anubhav hoga.'
+        'aries': 'मेष राशि वालों के लिए आज का दिन नए अवसर लाएगा।',
+        'taurus': 'वृषभ राशि वालों के लिए आज धन लाभ का योग है।',
+        'gemini': 'मिथुन राशि वालों को आज नए मित्रों से मिलने का अवसर मिलेगा।',
+        'cancer': 'कर्क राशि वालों के लिए आज का दिन शांतिपूर्ण रहेगा।',
+        'leo': 'सिंह राशि वालों को आज कार्यक्षेत्र में सफलता मिलेगी।',
+        'virgo': 'कन्या राशि वालों को आज अपनी सेहत का ध्यान रखना चाहिए।',
+        'libra': 'तुला राशि वालों के लिए आज का दिन परिवार के साथ अच्छा बीतेगा।',
+        'scorpio': 'वृश्चिक राशि वालों को आज आर्थिक लाभ होने की संभावना है।',
+        'sagittarius': 'धनु राशि वालों को आज यात्रा से लाभ हो सकता है।',
+        'capricorn': 'मकर राशि वालों को आज मेहनत का फल मिलेगा।',
+        'aquarius': 'कुंभ राशि वालों के लिए आज का दिन सृजनात्मक (creative) रहेगा।',
+        'pisces': 'मीन राशि वालों को आज आध्यात्मिक शांति का अनुभव होगा।'
     };
     
     // Fallback if rashi is not recognized or not standard format
     let rashiKey = rashi ? rashi.toLowerCase() : '';
-    let message = messages[rashiKey] || 'Aaj ka din aapke liye shubh rahega.';
+    let message = messages[rashiKey] || 'आज का दिन आपके लिए शुभ रहेगा।';
     
-    return `Namaste ${name || 'Bhakta'}! ${message} Apni puri rashi padhne ke liye click karein.`;
+    return `नमस्ते ${name || 'भक्त'}! ${message} अपनी पूरी राशि पढ़ने के लिए ऐप खोलें।`;
 }
 
 // Send Notifications
@@ -43,10 +34,9 @@ async function sendDailyNotifications() {
     console.log("Starting daily Rashi notifications job...");
     
     try {
-        // Find users who have both FCM token and Rashi set
+        // Find users who have FCM token
         const users = await User.find({
             fcmToken: { $exists: true, $ne: "" },
-            rashi: { $exists: true, $ne: "" },
             isActive: true
         });
 
@@ -57,12 +47,16 @@ async function sendDailyNotifications() {
 
         for (const user of users) {
             const messageBody = getDailyRashiMessage(user.name, user.rashi);
+            const title = `Aaj ka Rashifal - ${user.rashi.toUpperCase()}`;
             
             const message = {
                 token: user.fcmToken,
                 notification: {
-                    title: `Aaj ka Rashifal - ${user.rashi.toUpperCase()}`,
+                    title: title,
                     body: messageBody
+                },
+                android: {
+                    priority: "high"
                 },
                 data: {
                     type: 'rashi',
@@ -71,7 +65,16 @@ async function sendDailyNotifications() {
             };
             
             try {
-                await admin.messaging().send(message);
+                await getMessaging().send(message);
+                
+                // Save to DB
+                await Notification.create({
+                    userId: user._id,
+                    title: title,
+                    body: messageBody,
+                    type: "rashi"
+                });
+                
                 successCount++;
             } catch (error) {
                 console.error(`Error sending message to ${user.name} (${user.mobile}):`, error.message);

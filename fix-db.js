@@ -8,7 +8,7 @@ dotenv.config();
 mongoose.connect(process.env.MONGO_URI).then(async () => {
   const Astrologer = require('./models/Astrologer');
   const astrologers = await Astrologer.find({});
-  
+
   for (let astrologer of astrologers) {
     if (astrologer.image && astrologer.image.startsWith('data:image')) {
       console.log('Fixing image for:', astrologer.name);
@@ -19,11 +19,11 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
           const data = Buffer.from(matches[2], 'base64');
           const filename = `${Date.now()}-astrologer.${type}`;
           const filepath = path.join(__dirname, 'uploads', filename);
-          
+
           fs.writeFileSync(filepath, data);
-//           const newUrl = `https://api.pujapathsanskar.com/uploads/${filename}`;
-          const newUrl = `http://192.168.29.34:5000/uploads/${filename}`;
-          
+          //           const newUrl = `https://api.pujapathsanskar.com/uploads/${filename}`;
+          const newUrl = `http://192.168.29.234:5000/uploads/${filename}`;
+
           astrologer.image = newUrl;
           await astrologer.save();
           console.log('Fixed:', newUrl);

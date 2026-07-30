@@ -14,8 +14,8 @@ const createPuja = async (req, res) => {
       requiredMaterials: req.body.requiredMaterials,
       auspiciousTime: req.body.auspiciousTime,
       basePrice: req.body.basePrice || 0,
-//       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
-      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      //       image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
+      image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
       isTrending: req.body.isTrending === "true" || req.body.isTrending === true,
     });
     res.status(201).json(puja);
@@ -28,8 +28,8 @@ const createPuja = async (req, res) => {
 const formatImageUrl = (image) => {
   if (!image) return "";
   if (image.startsWith("http")) return image;
-//   return `https://api.pujapathsanskar.com/${image.replace(/\\/g, "/")}`;
-  return `https://api.pujapathsanskar.com/${image.replace(/\\/g, "/")}`;
+  //   return `http://192.168.29.234:5000/${image.replace(/\\/g, "/")}`;
+  return `http://192.168.29.234:5000/${image.replace(/\\/g, "/")}`;
 };
 
 // Get All Pujas
@@ -65,7 +65,7 @@ const getPujaById = async (req, res) => {
   try {
     const puja = await Puja.findById(req.params.id);
     if (!puja) return res.status(404).json({ message: "Puja not found" });
-    
+
     const formattedPuja = {
       ...puja._doc,
       image: formatImageUrl(puja.image)
@@ -84,13 +84,13 @@ const updatePuja = async (req, res) => {
 
     const fields = ["pujaName", "pujaType", "duration", "description", "whatIsIncluded", "basePrice", "shortDescription", "benefits", "requiredMaterials", "auspiciousTime"];
     fields.forEach((f) => { if (req.body[f] !== undefined) puja[f] = req.body[f]; });
-    
+
     if (req.body.isTrending !== undefined) {
       puja.isTrending = req.body.isTrending === "true" || req.body.isTrending === true;
     }
-    
-//     if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-    if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+
+    //     if (req.file) puja.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
+    if (req.file) puja.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
 
     const updated = await puja.save();
     res.json(updated);

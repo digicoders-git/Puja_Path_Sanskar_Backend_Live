@@ -18,6 +18,11 @@ router.post("/google", require("../controllers/userController").googleLogin);
 router.get("/profile", Auth, userOnly, getMyProfile);
 router.put("/profile", Auth, userOnly, upload.single("profileImage"), updateMyProfile);
 
+// Notifications Routes
+const { getUserNotifications, markAsRead } = require("../controllers/notificationController");
+router.get("/notifications", Auth, userOnly, getUserNotifications);
+router.put("/notifications/read", Auth, userOnly, markAsRead);
+
 // Admin Routes (requires admin token)
 router.get("/", Auth, adminOnly, getAllUsers);
 router.put("/:id", Auth, adminOnly, require("../controllers/userController").updateUser);

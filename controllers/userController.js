@@ -7,7 +7,7 @@ const client = new OAuth2Client("335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.a
 const generateToken = (id) => {
   return jwt.sign({ id, role: "user" }, process.env.JWT_SECRET, {
     expiresIn: "30d",
-    
+
   });
 };
 
@@ -24,8 +24,8 @@ const sendOtp = async (req, res) => {
   }
 
 
-  res.status(200).json({ 
-    message: "OTP sent successfully (Fixed to 123456)", 
+  res.status(200).json({
+    message: "OTP sent successfully (Fixed to 123456)",
     mobile,
     success: true
   });
@@ -33,7 +33,7 @@ const sendOtp = async (req, res) => {
 
 // Verify OTP & Login/Register
 const verifyOtp = async (req, res) => {
-  const { mobile, otp, name } = req.body;
+  const { mobile, otp, name, fcmToken, rashi } = req.body;
   if (!mobile || !otp) {
     return res.status(400).json({ message: "Mobile and OTP are required" });
   }
@@ -56,18 +56,34 @@ const verifyOtp = async (req, res) => {
     if (!user) {
       // Naye user ke liye 'name' dena zaroori hai
       if (!name) {
-        return res.status(400).json({ 
-          message: "Please give me a name", 
-          success: false 
+        return res.status(400).json({
+          message: "Please give me a name",
+          success: false
         });
+      }
+
+      // Calculate rashi if not provided
+      let calculatedRashi = rashi || 'Leo';
+      if (!rashi && name) {
+        if (name.toLowerCase().startsWith('a') || name.toLowerCase().startsWith('l')) calculatedRashi = 'Aries';
+        else if (name.toLowerCase().startsWith('t') || name.toLowerCase().startsWith('v')) calculatedRashi = 'Taurus';
+        else if (name.toLowerCase().startsWith('m')) calculatedRashi = 'Leo';
       }
 
       // Agar name de diya hai toh create kar do
       user = await User.create({
         mobile,
         name: name,
+        fcmToken: fcmToken || "",
+        rashi: calculatedRashi
       });
       isNewUser = true;
+    } else {
+      // Agar user pehle se hai, toh sirf FCM Token update kar do (if provided)
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+        await user.save();
+      }
     }
 
     // Response bhejna (Naya hai toh Registration, Purana hai toh Login)
@@ -87,7 +103,8 @@ const verifyOtp = async (req, res) => {
 
 // Google Login
 const googleLogin = async (req, res) => {
-  const { idToken } = req.body;
+  const { idToken, fcmToken } = req.body;
+
   if (!idToken) {
     return res.status(400).json({ message: "Google ID Token is required", success: false });
   }
@@ -97,7 +114,7 @@ const googleLogin = async (req, res) => {
       idToken: idToken,
       audience: "335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com",
     });
-    
+
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
@@ -111,16 +128,32 @@ const googleLogin = async (req, res) => {
         user.googleId = googleId;
         user.name = user.name || name;
         user.profileImage = user.profileImage || picture;
+        if (fcmToken) user.fcmToken = fcmToken;
         await user.save();
       } else {
+        let calculatedRashi = 'Leo';
+        if (name) {
+          if (name.toLowerCase().startsWith('a') || name.toLowerCase().startsWith('l')) calculatedRashi = 'Aries';
+          else if (name.toLowerCase().startsWith('t') || name.toLowerCase().startsWith('v')) calculatedRashi = 'Taurus';
+          else if (name.toLowerCase().startsWith('m')) calculatedRashi = 'Leo';
+        }
+
         user = await User.create({
           googleId,
           email,
           name,
           profileImage: picture,
-          isActive: true
+          isActive: true,
+          rashi: calculatedRashi,
+          fcmToken: fcmToken || ""
         });
         isNewUser = true;
+      }
+    } else {
+      // User exists by googleId, update fcmToken
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+        await user.save();
       }
     }
 
@@ -163,11 +196,11 @@ const updateMyProfile = async (req, res) => {
     if (gender !== undefined) user.gender = gender;
     if (fcmToken !== undefined) user.fcmToken = fcmToken;
     if (rashi !== undefined) user.rashi = rashi;
-    
+
     // Image handling
     if (req.file) {
-//       user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-      user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+      //       user.profileImage = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
+      user.profileImage = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
     }
 
     if (mobile !== undefined) {
