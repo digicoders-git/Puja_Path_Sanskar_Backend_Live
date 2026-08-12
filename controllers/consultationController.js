@@ -1,4 +1,5 @@
 const ConsultationBooking = require("../models/ConsultationBooking");
+const emailService = require("../services/emailService");
 
 // Create Consultation Booking (App)
 exports.createBooking = async (req, res) => {
@@ -14,6 +15,20 @@ exports.createBooking = async (req, res) => {
     });
 
     await booking.save();
+    
+    // Send Email Notification Asynchronously
+    ConsultationBooking.findById(booking._id)
+      .populate("user", "name")
+      .populate("astrologer", "name")
+      .then(populatedBooking => {
+        if (populatedBooking) {
+          const userName = populatedBooking.user?.name;
+          const astrologerName = populatedBooking.astrologer?.name;
+          emailService.sendAstrologerBookingEmail(populatedBooking, astrologerName, userName).catch(console.error);
+        }
+      })
+      .catch(console.error);
+
     res.status(201).json({ success: true, message: "Booking created successfully", booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -117,7 +117,13 @@ const createPandit = async (req, res) => {
       selectedPujas: parseJson(req.body.selectedPujas),
     };
 
+const emailService = require("../services/emailService");
+
     const pandit = await Pandit.create(panditData);
+    
+    // Send Email Notification Asynchronously
+    emailService.sendPanditRegistrationEmail(pandit).catch(console.error);
+
     res.status(201).json(pandit);
   } catch (error) {
     if (error.name === "ValidationError") {
