@@ -1,15 +1,17 @@
 const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+dotenv.config();
 
-// Create Transporter
-const transporter = nodemailer.createTransport({
+// Create Transporter Dynamically
+const getTransporter = () => nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER || "pujapathsanskarkd@gmail.com",
+    pass: process.env.EMAIL_PASS || "jbmoyxwerlfiubgd",
   },
 });
 
-const ADMIN_EMAIL = process.env.EMAIL_USER;
+const getAdminEmail = () => process.env.EMAIL_USER || "pujapathsanskarkd@gmail.com";
 const THEME_COLOR = "#e8621a";
 
 // Base HTML Wrapper
@@ -63,9 +65,9 @@ exports.sendPanditRegistrationEmail = async (pandit) => {
       <p>Please review their profile in the Admin Panel to verify and activate their account.</p>
     `;
 
-    await transporter.sendMail({
-      from: `"Puja Path Sanskar" <${ADMIN_EMAIL}>`,
-      to: ADMIN_EMAIL,
+    await getTransporter().sendMail({
+      from: `"Puja Path Sanskar" <${getAdminEmail()}>`,
+      to: getAdminEmail(),
       subject,
       html: wrapHtml("New Pandit Registration", content),
     });
@@ -93,9 +95,9 @@ exports.sendPujaBookingEmail = async (booking, pujaName, panditName, userName) =
       <p>Please check the Admin Panel for the full address and special instructions.</p>
     `;
 
-    await transporter.sendMail({
-      from: `"Puja Path Sanskar" <${ADMIN_EMAIL}>`,
-      to: ADMIN_EMAIL,
+    await getTransporter().sendMail({
+      from: `"Puja Path Sanskar" <${getAdminEmail()}>`,
+      to: getAdminEmail(),
       subject,
       html: wrapHtml("New Puja Booking", content),
     });
@@ -123,9 +125,9 @@ exports.sendAstrologerBookingEmail = async (consultation, astrologerName, userNa
       <p>Please ensure the Astrologer is informed and the consultation is completed on time.</p>
     `;
 
-    await transporter.sendMail({
-      from: `"Puja Path Sanskar" <${ADMIN_EMAIL}>`,
-      to: ADMIN_EMAIL,
+    await getTransporter().sendMail({
+      from: `"Puja Path Sanskar" <${getAdminEmail()}>`,
+      to: getAdminEmail(),
       subject,
       html: wrapHtml("New Astrologer Booking", content),
     });
