@@ -1,7 +1,8 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
-const client = new OAuth2Client("335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com");
+const CLIENT_ID = "335340683871-lllb03nursf6gg2emukftfmkgcuosiri.apps.googleusercontent.com";
+const client = new OAuth2Client(CLIENT_ID);
 
 // Generate JWT
 const generateToken = (id) => {
@@ -110,9 +111,20 @@ const googleLogin = async (req, res) => {
   }
 
   try {
+    const validAudiences = [
+      "335340683871-lllb03nursf6gg2emukftfmkgcuosiri.apps.googleusercontent.com",
+      "335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com",
+      "335340683871-0o0n3u5m0b8oajh7c503eddl98bbfloq.apps.googleusercontent.com",
+      "335340683871-9k1uqgikep5lnb71ehs81v9hbgtnhbke.apps.googleusercontent.com",
+      "335340683871-k8hh43f7f1o2aegq2cbnclv8g15gekdf.apps.googleusercontent.com",
+      "335340683871-p0r2tph7utbct1svam4mppkqmdpklku8.apps.googleusercontent.com",
+      "335340683871-ptapep6iuf56leo3ugstaa5pj1nhbm5a.apps.googleusercontent.com",
+      "335340683871-u8bae8rk1r2krd8ddukulou1uqrv0sq4.apps.googleusercontent.com"
+    ];
+
     const ticket = await client.verifyIdToken({
       idToken: idToken,
-      audience: "335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com",
+      audience: validAudiences,
     });
 
     const payload = ticket.getPayload();
@@ -168,6 +180,7 @@ const googleLogin = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Google Auth verification error:", error);
     res.status(500).json({ message: "Invalid Google Token or Server Error", error: error.message, success: false });
   }
 };
@@ -199,8 +212,8 @@ const updateMyProfile = async (req, res) => {
 
     // Image handling
     if (req.file) {
-      //       user.profileImage = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
-      user.profileImage = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
+      //       user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+      user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
     }
 
     if (mobile !== undefined) {

@@ -22,8 +22,8 @@ const registerAdmin = async (req, res) => {
       name,
       email,
       password,
-      //       image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
-      image: req.file ? `http://192.168.29.234:5000/uploads/${req.file.filename}` : "",
+      //       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
     });
 
     if (admin) {
@@ -106,8 +106,8 @@ const updateAdminProfile = async (req, res) => {
       admin.email = req.body.email || admin.email;
 
       if (req.file) {
-        //         admin.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
-        admin.image = `http://192.168.29.234:5000/uploads/${req.file.filename}`;
+        //         admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+        admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
       }
 
       const updatedAdmin = await admin.save();
