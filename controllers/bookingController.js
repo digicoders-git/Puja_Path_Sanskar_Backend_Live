@@ -2,6 +2,7 @@ const Booking = require("../models/Booking");
 const Puja = require("../models/Puja");
 const Pandit = require("../models/Pandit");
 const Address = require("../models/Address");
+const emailService = require("../services/emailService");
 
 // Create a new booking (User App)
 const createBooking = async (req, res) => {
@@ -66,6 +67,22 @@ const createBooking = async (req, res) => {
     });
 
     const savedBooking = await booking.save();
+    
+    // Send Email Notification Asynchronously
+    Booking.findById(savedBooking._id)
+      .populate("user", "name")
+      .populate("puja", "pujaName")
+      .populate("pandit", "fullName")
+      .then(populatedBooking => {
+        if (populatedBooking) {
+          const userName = populatedBooking.user?.name;
+          const pujaName = populatedBooking.puja?.pujaName;
+          const panditName = populatedBooking.pandit?.fullName;
+          emailService.sendPujaBookingEmail(populatedBooking, pujaName, panditName, userName).catch(console.error);
+        }
+      })
+      .catch(console.error);
+
     res.status(201).json({ success: true, booking: savedBooking, message: "Booking created successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

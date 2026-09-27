@@ -1,4 +1,5 @@
 const Pandit = require("../models/Pandit");
+const emailService = require("../services/emailService");
 
 // OTP Verification (Fixed to 1234)
 const sendOTP = async (req, res) => {
@@ -104,20 +105,19 @@ const createPandit = async (req, res) => {
       declaration: req.body.declaration === "true" || req.body.declaration === true,
 
       // Files
-      //       idProof: req.files?.idProof ? `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}` : "",
       idProof: req.files?.idProof ? `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}` : "",
-      //       profilePhoto: req.files?.profilePhoto ? `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}` : "",
       profilePhoto: req.files?.profilePhoto ? `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}` : "",
-      //       introVideo: req.files?.introVideo ? `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}` : "",
       introVideo: req.files?.introVideo ? `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}` : "",
-      //       pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
       pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
-      //       pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
       pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
       selectedPujas: parseJson(req.body.selectedPujas),
     };
 
     const pandit = await Pandit.create(panditData);
+    
+    // Send Email Notification Asynchronously
+    emailService.sendPanditRegistrationEmail(pandit).catch(console.error);
+
     res.status(201).json(pandit);
   } catch (error) {
     if (error.name === "ValidationError") {
@@ -132,7 +132,6 @@ const createPandit = async (req, res) => {
 const formatMediaUrl = (media) => {
   if (!media) return "";
   if (media.startsWith("http")) return media;
-  //   return `https://api.pujapathsanskar.com/${media.replace(/\\/g, "/")}`;
   return `https://api.pujapathsanskar.com/${media.replace(/\\/g, "/")}`;
 };
 
@@ -273,15 +272,10 @@ const updatePandit = async (req, res) => {
       }
     });
 
-    //     if (req.files?.idProof) pandit.idProof = `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}`;
     if (req.files?.idProof) pandit.idProof = `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}`;
-    //     if (req.files?.profilePhoto) pandit.profilePhoto = `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}`;
     if (req.files?.profilePhoto) pandit.profilePhoto = `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}`;
-    //     if (req.files?.introVideo) pandit.introVideo = `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}`;
     if (req.files?.introVideo) pandit.introVideo = `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}`;
-    //     if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
     if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
-    //     if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
     if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
 
     const updated = await pandit.save();
@@ -331,7 +325,6 @@ const addPanditReview = async (req, res) => {
       user: req.user.id || req.user._id,
       rating: Number(rating),
       comment,
-      //       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
     };
 
