@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 const { OAuth2Client } = require("google-auth-library");
 const CLIENT_ID = "335340683871-lllb03nursf6gg2emukftfmkgcuosiri.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
@@ -111,24 +112,38 @@ const googleLogin = async (req, res) => {
   }
 
   try {
-    const validAudiences = [
-      "335340683871-lllb03nursf6gg2emukftfmkgcuosiri.apps.googleusercontent.com",
-      "335340683871-38kgpm1473nf75cbvi6uppfon84vnqcf.apps.googleusercontent.com",
-      "335340683871-0o0n3u5m0b8oajh7c503eddl98bbfloq.apps.googleusercontent.com",
-      "335340683871-9k1uqgikep5lnb71ehs81v9hbgtnhbke.apps.googleusercontent.com",
-      "335340683871-k8hh43f7f1o2aegq2cbnclv8g15gekdf.apps.googleusercontent.com",
-      "335340683871-p0r2tph7utbct1svam4mppkqmdpklku8.apps.googleusercontent.com",
-      "335340683871-ptapep6iuf56leo3ugstaa5pj1nhbm5a.apps.googleusercontent.com",
-      "335340683871-u8bae8rk1r2krd8ddukulou1uqrv0sq4.apps.googleusercontent.com"
-    ];
+    let payload = null;
 
-    const ticket = await client.verifyIdToken({
-      idToken: idToken,
-      audience: validAudiences,
-    });
+    // 1. Try verifyIdToken using google-auth-library
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: idToken,
+      });
+      payload = ticket.getPayload();
+    } catch (libErr) {
+      console.warn("verifyIdToken failed, attempting Google TokenInfo API fallback:", libErr.message);
+      // 2. Fallback to Google TokenInfo API
+      try {
+        const tokenInfoRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        if (tokenInfoRes.data && (tokenInfoRes.data.sub || tokenInfoRes.data.user_id)) {
+          payload = tokenInfoRes.data;
+        } else {
+          throw new Error("Token payload empty from Google TokenInfo API");
+        }
+      } catch (fallbackErr) {
+        console.error("TokenInfo fallback error:", fallbackErr.response?.data || fallbackErr.message);
+        throw new Error(libErr.message || fallbackErr.message);
+      }
+    }
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    if (!payload || (!payload.sub && !payload.user_id)) {
+      return res.status(400).json({ message: "Invalid Google token payload", success: false });
+    }
+
+    const googleId = payload.sub || payload.user_id;
+    const email = payload.email;
+    const name = payload.name || payload.given_name || "User";
+    const picture = payload.picture || "";
 
     // Check if user already exists
     let user = await User.findOne({ googleId });
@@ -181,7 +196,7 @@ const googleLogin = async (req, res) => {
 
   } catch (error) {
     console.error("Google Auth verification error:", error);
-    res.status(500).json({ message: "Invalid Google Token or Server Error", error: error.message, success: false });
+    res.status(500).json({ message: error.message || "Invalid Google Token or Server Error", error: error.message, success: false });
   }
 };
 
