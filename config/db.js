@@ -21,6 +21,24 @@ const connectDB = async () => {
         } catch (err) {
             // Index might not exist or already be correct, ignore error
         }
+
+        // Fix User mobile index issue for Google Login (sparse index)
+        try {
+            const User = require("../models/User");
+            
+            // Unset null or empty string mobile values so sparse index works properly
+            await User.updateMany(
+                { $or: [{ mobile: null }, { mobile: "" }] },
+                { $unset: { mobile: 1 } }
+            );
+            console.log("Cleaned up null/empty user mobile values");
+
+            await User.collection.dropIndex("mobile_1");
+            console.log("User mobile_1 index dropped for recreation with sparse: true");
+            await User.syncIndexes();
+        } catch (err) {
+            // Index might not exist or already be correct, ignore error
+        }
     } catch (error) {
         console.log(error);
         process.exit(1);
