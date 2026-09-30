@@ -11,7 +11,9 @@ const {
   togglePandit,
   getActivePandits,
   searchPandits,
+  getNearbyPandits,
   addPanditReview,
+  getEnums,
 } = require("../controllers/panditController");
 const { Auth, adminOnly } = require("../middleware/authMiddleware");
 
@@ -48,9 +50,11 @@ const handleUpload = (req, res, next) => {
 // router.post("/verify-otp", verifyOTP);
 
 // Pandit Routes
+router.get("/enums", getEnums);
 router.post("/", handleUpload, createPandit);
 router.post("/:id/reviews", Auth, upload.single("image"), addPanditReview);
 router.get("/active", getActivePandits); // Public route
+router.get("/nearby", getNearbyPandits); // Nearby with GPS / Radius calculation
 router.get("/search", searchPandits); // Public search route
 router.get("/", Auth, adminOnly, getAllPandits);
 router.get("/:id", getPanditById); // Public route

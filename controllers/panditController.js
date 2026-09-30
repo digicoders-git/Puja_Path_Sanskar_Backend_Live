@@ -47,6 +47,9 @@ const createPandit = async (req, res) => {
       currentAddress: req.body.currentAddress || "",
       permanentAddress: req.body.permanentAddress || "",
       pincode: req.body.pincode || "",
+      latitude: req.body.latitude ? Number(req.body.latitude) : 0,
+      longitude: req.body.longitude ? Number(req.body.longitude) : 0,
+      mapAddress: req.body.mapAddress || "",
 
       // 3. Identity Verification
       aadharNumber: req.body.aadharNumber || "",
@@ -56,7 +59,10 @@ const createPandit = async (req, res) => {
 
       // 5. Experience & Qualification
       experience: req.body.experience,
+      totalExperience: req.body.totalExperience || "",
       trainingGurukul: req.body.trainingGurukul || "",
+      primarySpecialization: req.body.primarySpecialization || req.body.specialization || "",
+      vedaSpecialization: req.body.vedaSpecialization || "",
       specializations: parseJson(req.body.specializations),
       languages: parseJson(req.body.languages),
 
@@ -105,11 +111,11 @@ const createPandit = async (req, res) => {
       declaration: req.body.declaration === "true" || req.body.declaration === true,
 
       // Files
-      idProof: req.files?.idProof ? `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}` : "",
-      profilePhoto: req.files?.profilePhoto ? `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}` : "",
-      introVideo: req.files?.introVideo ? `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}` : "",
-      pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
-      pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`) : [],
+      idProof: req.files?.idProof ? `${getBaseUrl(req)}/uploads/${req.files.idProof[0].filename}` : "",
+      profilePhoto: req.files?.profilePhoto ? `${getBaseUrl(req)}/uploads/${req.files.profilePhoto[0].filename}` : "",
+      introVideo: req.files?.introVideo ? `${getBaseUrl(req)}/uploads/${req.files.introVideo[0].filename}` : "",
+      pujaPhotos: req.files?.pujaPhotos ? req.files.pujaPhotos.map(f => `${getBaseUrl(req)}/uploads/${f.filename}`) : [],
+      pujaVideoClips: req.files?.pujaVideoClips ? req.files.pujaVideoClips.map(f => `${getBaseUrl(req)}/uploads/${f.filename}`) : [],
       selectedPujas: parseJson(req.body.selectedPujas),
     };
 
@@ -128,22 +134,17 @@ const createPandit = async (req, res) => {
   }
 };
 
-// Helper to format image/video URL
-const formatMediaUrl = (media) => {
-  if (!media) return "";
-  if (media.startsWith("http")) return media;
-  return `https://api.pujapathsanskar.com/${media.replace(/\\/g, "/")}`;
-};
+const { getBaseUrl, formatMediaUrl } = require("../utils/urlHelper");
 
-const formatPanditMedia = (pandit) => {
+const formatPanditMedia = (pandit, req) => {
   const p = pandit._doc ? pandit._doc : pandit;
   return {
     ...p,
-    idProof: formatMediaUrl(p.idProof),
-    profilePhoto: formatMediaUrl(p.profilePhoto),
-    introVideo: formatMediaUrl(p.introVideo),
-    pujaPhotos: p.pujaPhotos ? p.pujaPhotos.map(formatMediaUrl) : [],
-    pujaVideoClips: p.pujaVideoClips ? p.pujaVideoClips.map(formatMediaUrl) : [],
+    idProof: formatMediaUrl(p.idProof, req),
+    profilePhoto: formatMediaUrl(p.profilePhoto, req),
+    introVideo: formatMediaUrl(p.introVideo, req),
+    pujaPhotos: p.pujaPhotos ? p.pujaPhotos.map(m => formatMediaUrl(m, req)) : [],
+    pujaVideoClips: p.pujaVideoClips ? p.pujaVideoClips.map(m => formatMediaUrl(m, req)) : [],
   };
 };
 
@@ -161,7 +162,7 @@ const getAllPandits = async (req, res) => {
       .populate("selectedPujas.puja")
       .populate("reviews.user", "name profileImage")
       .sort({ createdAt: -1 });
-    res.json(pandits.map(formatPanditMedia));
+    res.json(pandits.map(p => formatPanditMedia(p, req)));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -181,7 +182,7 @@ const getActivePandits = async (req, res) => {
       .populate("selectedPujas.puja")
       .populate("reviews.user", "name profileImage")
       .sort({ createdAt: -1 });
-    res.json(pandits.map(formatPanditMedia));
+    res.json(pandits.map(p => formatPanditMedia(p, req)));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -204,9 +205,130 @@ const searchPandits = async (req, res) => {
       .populate("selectedPujas.puja")
       .populate("reviews.user", "name profileImage")
       .sort({ createdAt: -1 });
-    res.json(pandits.map(formatPanditMedia));
+    res.json(pandits.map(p => formatPanditMedia(p, req)));
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// City coordinates mapping for fallback when pandit has no exact lat/lng
+const CITY_COORDINATES = {
+  'delhi': { lat: 28.6139, lng: 77.2090 },
+  'noida': { lat: 28.5355, lng: 77.3910 },
+  'gurgaon': { lat: 28.4595, lng: 77.0266 },
+  'ghaziabad': { lat: 28.6692, lng: 77.4538 },
+  'faridabad': { lat: 28.4089, lng: 77.3178 },
+  'mumbai': { lat: 19.0760, lng: 72.8777 },
+  'pune': { lat: 18.5204, lng: 73.8567 },
+  'bengaluru': { lat: 12.9716, lng: 77.5946 },
+  'chennai': { lat: 13.0827, lng: 80.2707 },
+  'hyderabad': { lat: 17.3850, lng: 78.4867 },
+  'kolkata': { lat: 22.5726, lng: 88.3639 },
+  'ahmedabad': { lat: 23.0225, lng: 72.5714 },
+  'jaipur': { lat: 26.9124, lng: 75.7873 },
+  'lucknow': { lat: 26.8467, lng: 80.9462 },
+  'varanasi': { lat: 25.3176, lng: 82.9739 },
+  'prayagraj': { lat: 25.4358, lng: 81.8463 },
+  'mathura': { lat: 27.4924, lng: 77.6737 },
+  'vrindavan': { lat: 27.5794, lng: 77.6964 },
+  'ayodhya': { lat: 26.7922, lng: 82.1998 },
+  'haridwar': { lat: 29.9457, lng: 78.1642 },
+  'rishikesh': { lat: 30.0869, lng: 78.2676 },
+  'indore': { lat: 22.7196, lng: 75.8577 },
+  'bhopal': { lat: 23.2599, lng: 77.4126 },
+  'patna': { lat: 25.5941, lng: 85.1376 },
+  'kanpur': { lat: 26.4499, lng: 80.3319 },
+  'gorakhpur': { lat: 26.7606, lng: 83.3732 },
+  'agra': { lat: 27.1767, lng: 78.0081 },
+  'meerut': { lat: 28.9845, lng: 77.7064 },
+  'bareilly': { lat: 28.3670, lng: 79.4304 },
+  'aligarh': { lat: 27.8974, lng: 78.0880 },
+  'moradabad': { lat: 28.8386, lng: 78.7733 },
+  'mirzapur': { lat: 25.1337, lng: 82.5644 },
+  'sitapur': { lat: 27.5684, lng: 80.6829 },
+  'jhansi': { lat: 25.4484, lng: 78.5685 },
+  'gonda': { lat: 27.1300, lng: 81.9600 },
+  'barabanki': { lat: 26.9274, lng: 81.1843 },
+  'hardoi': { lat: 27.3956, lng: 80.1314 },
+  'raebareli': { lat: 26.2298, lng: 81.2415 },
+  'sultanpur': { lat: 26.2648, lng: 82.0727 },
+  'amethi': { lat: 26.1558, lng: 81.8159 },
+  'unnao': { lat: 26.5463, lng: 80.4879 },
+};
+
+// Haversine distance in KM
+const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// Get Nearby Pandits based on GPS coordinates or city
+const getNearbyPandits = async (req, res) => {
+  try {
+    const lat = req.query.lat ? parseFloat(req.query.lat) : null;
+    const lng = req.query.lng ? parseFloat(req.query.lng) : null;
+    const city = req.query.city ? req.query.city.trim() : null;
+    const maxRadius = req.query.radius ? parseFloat(req.query.radius) : 100; // default 100km
+
+    let query = { isActive: true };
+    const pandits = await Pandit.find(query)
+      .populate("selectedPujas.puja")
+      .populate("reviews.user", "name profileImage");
+
+    const formatted = pandits.map(p => {
+      const data = formatPanditMedia(p, req);
+      let pLat = data.latitude;
+      let pLng = data.longitude;
+
+      // Fallback to city coordinates if pandit doesn't have exact lat/lng
+      if ((!pLat || pLat === 0) && data.city) {
+        const cityKey = data.city.toLowerCase().trim();
+        if (CITY_COORDINATES[cityKey]) {
+          pLat = CITY_COORDINATES[cityKey].lat;
+          pLng = CITY_COORDINATES[cityKey].lng;
+        }
+      }
+
+      data.latitude = pLat || 0;
+      data.longitude = pLng || 0;
+
+      // Calculate distance if user lat/lng provided
+      if (lat !== null && lng !== null && pLat && pLng) {
+        const dist = calculateDistanceKm(lat, lng, pLat, pLng);
+        data.distanceKm = parseFloat(dist.toFixed(1));
+      } else {
+        data.distanceKm = null;
+      }
+
+      return data;
+    });
+
+    // If coordinates were provided, sort by distance
+    let result = formatted;
+    if (lat !== null && lng !== null) {
+      result = formatted
+        .filter(p => p.distanceKm === null || p.distanceKm <= maxRadius)
+        .sort((a, b) => {
+          if (a.distanceKm === null) return 1;
+          if (b.distanceKm === null) return -1;
+          return a.distanceKm - b.distanceKm;
+        });
+    } else if (city) {
+      // Filter by city if no coordinates provided
+      const cLower = city.toLowerCase();
+      result = formatted.filter(p => (p.city || "").toLowerCase().includes(cLower));
+    }
+
+    res.json({ success: true, count: result.length, pandits: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -217,7 +339,7 @@ const getPanditById = async (req, res) => {
       .populate("selectedPujas.puja")
       .populate("reviews.user", "name profileImage");
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
-    res.json(formatPanditMedia(pandit));
+    res.json(formatPanditMedia(pandit, req));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -238,7 +360,9 @@ const updatePandit = async (req, res) => {
     const textFields = [
       "fullName", "mobileNumber", "whatsappNumber", "alternateNumber", "emailId", "dob", "gender",
       "state", "city", "district", "currentAddress", "permanentAddress", "pincode",
-      "aadharNumber", "panCard", "experience", "trainingGurukul",
+      "latitude", "longitude", "mapAddress",
+      "aadharNumber", "panCard", "experience", "trainingGurukul", "totalExperience",
+      "primarySpecialization", "specialization", "vedaSpecialization",
       "basicPujaCharges", "akhandPathCharges", "perDayCharges", "travelCharges",
       "mantraLevel", "timeDiscipline", "dressCode", "eventHandling", "traditionalDress", "audioClarity",
       "travelWillingness", "maxDistance", "serviceArea", "travelAvailability",
@@ -272,14 +396,15 @@ const updatePandit = async (req, res) => {
       }
     });
 
-    if (req.files?.idProof) pandit.idProof = `https://api.pujapathsanskar.com/uploads/${req.files.idProof[0].filename}`;
-    if (req.files?.profilePhoto) pandit.profilePhoto = `https://api.pujapathsanskar.com/uploads/${req.files.profilePhoto[0].filename}`;
-    if (req.files?.introVideo) pandit.introVideo = `https://api.pujapathsanskar.com/uploads/${req.files.introVideo[0].filename}`;
-    if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
-    if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => `https://api.pujapathsanskar.com/uploads/${f.filename}`);
+    const baseUrl = getBaseUrl(req);
+    if (req.files?.idProof) pandit.idProof = `${baseUrl}/uploads/${req.files.idProof[0].filename}`;
+    if (req.files?.profilePhoto) pandit.profilePhoto = `${baseUrl}/uploads/${req.files.profilePhoto[0].filename}`;
+    if (req.files?.introVideo) pandit.introVideo = `${baseUrl}/uploads/${req.files.introVideo[0].filename}`;
+    if (req.files?.pujaPhotos) pandit.pujaPhotos = req.files.pujaPhotos.map(f => `${baseUrl}/uploads/${f.filename}`);
+    if (req.files?.pujaVideoClips) pandit.pujaVideoClips = req.files.pujaVideoClips.map(f => `${baseUrl}/uploads/${f.filename}`);
 
     const updated = await pandit.save();
-    res.json(updated);
+    res.json(formatPanditMedia(updated, req));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -325,7 +450,7 @@ const addPanditReview = async (req, res) => {
       user: req.user.id || req.user._id,
       rating: Number(rating),
       comment,
-      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      image: req.file ? `${getBaseUrl(req)}/uploads/${req.file.filename}` : "",
     };
 
     if (!pandit.reviews) pandit.reviews = [];
@@ -345,6 +470,50 @@ const addPanditReview = async (req, res) => {
   }
 };
 
+// Get Pandit Form Enums
+const getEnums = (req, res) => {
+  res.json({
+    specialization: [
+      "Grih Pravesh",
+      "Vivah",
+      "Satyanarayan Katha",
+      "Rudrabhishek",
+      "Sunderkand",
+      "Jagran",
+      "Bhagwat Katha",
+      "Navgrah Shanti",
+      "Havan / Yagya",
+      "Vastu Shanti",
+      "Maha Mrityunjaya Jaap",
+      "Kaal Sarp Dosh Nivaran"
+    ],
+    vedaSpecialization: [
+      "Rigveda",
+      "Yajurveda (Shukla)",
+      "Yajurveda (Krishna)",
+      "Samaveda",
+      "Atharvaveda",
+      "Sarva Veda / Karmakand"
+    ],
+    mantraLevel: [
+      "Basic",
+      "Intermediate",
+      "Fluent / Advanced",
+      "Vedic Acharya Level"
+    ],
+    timeDiscipline: [
+      "Strictly on Time (Always)",
+      "15 Mins Buffer",
+      "Flexible"
+    ],
+    experience: ["1–3 Years", "3–7 Years", "7+ Years"],
+    serviceArea: ["Within 10 km", "Entire City", "Nearby Districts"],
+    samagriArrangement: ["Yes", "No"],
+    samagriExperience: ["Basic Setup", "Full Setup", "No"],
+    travelAvailability: ["Only Local Area", "Entire District", "Other States Also"]
+  });
+};
+
 module.exports = {
   sendOTP,
   verifyOTP,
@@ -356,5 +525,7 @@ module.exports = {
   togglePandit,
   getActivePandits,
   searchPandits,
+  getNearbyPandits,
   addPanditReview,
+  getEnums,
 };

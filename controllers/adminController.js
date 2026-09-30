@@ -1,5 +1,6 @@
 const Admin = require("../models/Admin");
 const jwt = require("jsonwebtoken");
+const { getBaseUrl } = require("../utils/urlHelper");
 
 // Generate JWT
 const generateToken = (id) => {
@@ -22,8 +23,7 @@ const registerAdmin = async (req, res) => {
       name,
       email,
       password,
-      //       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
-      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      image: req.file ? `${getBaseUrl(req)}/uploads/${req.file.filename}` : "",
     });
 
     if (admin) {
@@ -106,8 +106,7 @@ const updateAdminProfile = async (req, res) => {
       admin.email = req.body.email || admin.email;
 
       if (req.file) {
-        //         admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-        admin.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+        admin.image = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
       }
 
       const updatedAdmin = await admin.save();

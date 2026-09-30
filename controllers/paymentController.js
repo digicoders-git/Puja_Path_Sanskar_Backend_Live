@@ -229,9 +229,119 @@ const verifyRemainingPayment = async (req, res) => {
   }
 };
 
+// Step 5: Consultation Payment Order Create
+const createConsultationPayment = async (req, res) => {
+  try {
+    const { astrologerId, problemDescription, amount } = req.body;
+
+    if (!astrologerId || !amount) {
+      return res.status(400).json({ message: "astrologerId and amount required", success: false });
+    }
+
+    const numAmount = Number(amount) || 151;
+
+    // Create Razorpay Order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(numAmount * 100), // in paise
+      currency: "INR",
+      receipt: `consult_${Date.now()}`,
+      notes: {
+        astrologerId: String(astrologerId),
+        problemDescription: problemDescription || "Astrology Consultation",
+        amount: numAmount,
+        userId: String(req.user.id || req.user._id),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Razorpay order created for consultation",
+      payment: {
+        razorpayOrderId: razorpayOrder.id,
+        amount: numAmount,
+        currency: "INR",
+        key: process.env.RAZORPAY_KEY_ID,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Step 6: Verify Consultation Payment & Create ConsultationBooking
+const verifyConsultationPayment = async (req, res) => {
+  try {
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({ message: "razorpayOrderId, razorpayPaymentId, razorpaySignature required", success: false });
+    }
+
+    // Verify Signature
+    const body = razorpayOrderId + "|" + razorpayPaymentId;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+
+    if (expectedSignature !== razorpaySignature) {
+      return res.status(400).json({ message: "Payment verification failed! Invalid signature.", success: false });
+    }
+
+    // Fetch order notes
+    const order = await razorpay.orders.fetch(razorpayOrderId);
+    const notes = order.notes;
+
+    const ConsultationBooking = require("../models/ConsultationBooking");
+    const emailService = require("../services/emailService");
+
+    const booking = new ConsultationBooking({
+      user: notes.userId,
+      astrologer: notes.astrologerId,
+      problemDescription: notes.problemDescription,
+      amount: Number(notes.amount) || 0,
+      bookingDate: new Date(),
+      status: "Confirmed",
+      paymentStatus: "Paid",
+    });
+
+    await booking.save();
+
+    // Add to Admin wallet
+    const admin = await Admin.findOne();
+    if (admin) {
+      admin.walletBalance = (admin.walletBalance || 0) + booking.amount;
+      await admin.save();
+    }
+
+    // Send email notification
+    ConsultationBooking.findById(booking._id)
+      .populate("user", "name email mobile")
+      .populate("astrologer", "name specialty")
+      .then((populatedBooking) => {
+        if (populatedBooking) {
+          const userName = populatedBooking.user?.name;
+          const astrologerName = populatedBooking.astrologer?.name;
+          emailService.sendAstrologerBookingEmail(populatedBooking, astrologerName, userName).catch(console.error);
+        }
+      })
+      .catch(console.error);
+
+    res.status(201).json({
+      success: true,
+      message: "Consultation payment verified and booked successfully!",
+      booking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message, success: false });
+  }
+};
+
 module.exports = {
   createBookingWithPayment,
   verifyPayment,
   payRemainingAmount,
   verifyRemainingPayment,
+  createConsultationPayment,
+  verifyConsultationPayment,
 };

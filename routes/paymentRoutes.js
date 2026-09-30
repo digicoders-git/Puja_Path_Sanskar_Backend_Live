@@ -4,6 +4,8 @@ const {
   verifyPayment,
   payRemainingAmount,
   verifyRemainingPayment,
+  createConsultationPayment,
+  verifyConsultationPayment,
 } = require("../controllers/paymentController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -13,5 +15,7 @@ router.post("/create-booking", Auth, userOnly, createBookingWithPayment);  // St
 router.post("/verify", Auth, userOnly, verifyPayment);                     // Step 2: 25% payment verify
 router.post("/remaining/:bookingId", Auth, userOnly, payRemainingAmount);  // Step 3: 75% payment order
 router.post("/verify-remaining", Auth, userOnly, verifyRemainingPayment);  // Step 4: 75% payment verify
+router.post("/consultation", Auth, userOnly, createConsultationPayment);    // Consultation payment order
+router.post("/verify-consultation", Auth, userOnly, verifyConsultationPayment); // Consultation payment verify
 
 module.exports = router;

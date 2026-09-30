@@ -8,94 +8,121 @@ const Notification = require('../models/Notification');
 // Function to generate daily Rashi text based on sign
 function getDailyRashiMessage(name, rashi) {
     const messages = {
-        'aries': 'मेष राशि वालों के लिए आज का दिन नए अवसर लाएगा।',
-        'taurus': 'वृषभ राशि वालों के लिए आज धन लाभ का योग है।',
-        'gemini': 'मिथुन राशि वालों को आज नए मित्रों से मिलने का अवसर मिलेगा।',
-        'cancer': 'कर्क राशि वालों के लिए आज का दिन शांतिपूर्ण रहेगा।',
-        'leo': 'सिंह राशि वालों को आज कार्यक्षेत्र में सफलता मिलेगी।',
-        'virgo': 'कन्या राशि वालों को आज अपनी सेहत का ध्यान रखना चाहिए।',
-        'libra': 'तुला राशि वालों के लिए आज का दिन परिवार के साथ अच्छा बीतेगा।',
-        'scorpio': 'वृश्चिक राशि वालों को आज आर्थिक लाभ होने की संभावना है।',
-        'sagittarius': 'धनु राशि वालों को आज यात्रा से लाभ हो सकता है।',
-        'capricorn': 'मकर राशि वालों को आज मेहनत का फल मिलेगा।',
-        'aquarius': 'कुंभ राशि वालों के लिए आज का दिन सृजनात्मक (creative) रहेगा।',
-        'pisces': 'मीन राशि वालों को आज आध्यात्मिक शांति का अनुभव होगा।'
+        'aries': 'मेष राशि: आज का दिन नए अवसर और सकारात्मक ऊर्जा लाएगा।',
+        'mesh': 'मेष राशि: आज का दिन नए अवसर और सकारात्मक ऊर्जा लाएगा।',
+        'taurus': 'वृषभ राशि: आज धन लाभ और कार्यक्षेत्र में उन्नति के योग हैं।',
+        'vrishabh': 'वृषभ राशि: आज धन लाभ और कार्यक्षेत्र में उन्नति के योग हैं।',
+        'gemini': 'मिथुन राशि: आज मित्रों से सहयोग और शुभ समाचार मिलेगा।',
+        'mithun': 'मिथुन राशि: आज मित्रों से सहयोग और शुभ समाचार मिलेगा।',
+        'cancer': 'कर्क राशि: आज का दिन शांतिपूर्ण रहेगा, परिवार का साथ मिलेगा।',
+        'kark': 'कर्क राशि: आज का दिन शांतिपूर्ण रहेगा, परिवार का साथ मिलेगा।',
+        'leo': 'सिंह राशि: आज आत्मविश्वास बढ़ेगा और कार्यों में सफलता मिलेगी।',
+        'singh': 'सिंह राशि: आज आत्मविश्वास बढ़ेगा और कार्यों में सफलता मिलेगी।',
+        'virgo': 'कन्या राशि: आज स्वास्थ्य का ध्यान रखें और योजनाबद्ध कार्य करें।',
+        'kanya': 'कन्या राशि: आज स्वास्थ्य का ध्यान रखें और योजनाबद्ध कार्य करें।',
+        'libra': 'तुला राशि: आज परिवार के साथ सुखद समय बीतेगा, व्यापार में लाभ होगा।',
+        'tula': 'तुला राशि: आज परिवार के साथ सुखद समय बीतेगा, व्यापार में लाभ होगा।',
+        'scorpio': 'वृश्चिक राशि: आज आर्थिक लाभ और नए कार्य प्रारंभ करने का उत्तम समय है।',
+        'vrishchik': 'वृश्चिक राशि: आज आर्थिक लाभ और नए कार्य प्रारंभ करने का उत्तम समय है।',
+        'sagittarius': 'धनु राशि: आज ज्ञान और भाग्य का साथ मिलेगा, यात्रा सुखद रहेगी।',
+        'dhanu': 'धनु राशि: आज ज्ञान और भाग्य का साथ मिलेगा, यात्रा सुखद रहेगी।',
+        'capricorn': 'मकर राशि: आज आपकी मेहनत रंग लाएगी, पद-प्रतिष्ठा में वृद्धि होगी।',
+        'makar': 'मकर राशि: आज आपकी मेहनत रंग लाएगी, पद-प्रतिष्ठा में वृद्धि होगी।',
+        'aquarius': 'कुंभ राशि: आज रचनात्मक विचारों से लाभ होगा, दिन शुभ रहेगा।',
+        'kumbh': 'कुंभ राशि: आज रचनात्मक विचारों से लाभ होगा, दिन शुभ रहेगा।',
+        'pisces': 'मीन राशि: आज आध्यात्मिक शांति और मनोकामना पूर्ति के योग हैं।',
+        'meen': 'मीन राशि: आज आध्यात्मिक शांति और मनोकामना पूर्ति के योग हैं।'
     };
-    
-    // Fallback if rashi is not recognized or not standard format
-    let rashiKey = rashi ? rashi.toLowerCase() : '';
-    let message = messages[rashiKey] || 'आज का दिन आपके लिए शुभ रहेगा।';
-    
-    return `नमस्ते ${name || 'भक्त'}! ${message} अपनी पूरी राशि पढ़ने के लिए ऐप खोलें।`;
+
+    let rashiClean = (rashi || '').toString().trim().toLowerCase();
+    // Normalize common hindi script rashis
+    const hindiMap = {
+        'मेष': 'aries', 'वृषभ': 'taurus', 'मिथुन': 'gemini', 'कर्क': 'cancer',
+        'सिंह': 'leo', 'कन्या': 'virgo', 'तुला': 'libra', 'वृश्चिक': 'scorpio',
+        'धनु': 'sagittarius', 'मकर': 'capricorn', 'कुंभ': 'aquarius', 'मीन': 'pisces'
+    };
+    if (hindiMap[rashiClean]) {
+        rashiClean = hindiMap[rashiClean];
+    }
+
+    const prediction = messages[rashiClean] || 'आज का दिन आपके लिए मंगलमय और शुभ रहेगा।';
+    const userName = (name && name.trim().length > 0) ? name.trim() : 'भक्त';
+
+    return {
+        title: rashi ? `आज का राशिफल (${rashi})` : 'आज का दैनिक राशिफल ॐ',
+        body: `नमस्ते ${userName} जी! ${prediction} अपना पूरा राशिफल और उपाय जानने के लिए ऐप खोलें।`
+    };
 }
 
 // Send Notifications
 async function sendDailyNotifications() {
-    console.log("Starting daily Rashi notifications job...");
+    console.log("Starting daily 8:00 AM Rashi notifications job...");
     
     try {
-        // Find users who have FCM token
-        const users = await User.find({
-            fcmToken: { $exists: true, $ne: "" },
-            isActive: true
-        });
-
-        console.log(`Found ${users.length} users with FCM tokens and Rashi to notify.`);
+        // Find active users
+        const users = await User.find({ isActive: true });
+        console.log(`Found ${users.length} active users to notify.`);
         
         let successCount = 0;
         let failCount = 0;
 
         for (const user of users) {
-            const messageBody = getDailyRashiMessage(user.name, user.rashi);
-            const title = `Aaj ka Rashifal - ${user.rashi.toUpperCase()}`;
+            const { title, body } = getDailyRashiMessage(user.name, user.rashi);
             
-            const message = {
-                token: user.fcmToken,
-                notification: {
-                    title: title,
-                    body: messageBody
-                },
-                android: {
-                    priority: "high"
-                },
-                data: {
-                    type: 'rashi',
-                    sign: user.rashi.toLowerCase()
-                }
-            };
-            
+            // 1. Always save in-app notification in DB so user sees it in notifications page
             try {
-                await getMessaging().send(message);
-                
-                // Save to DB
                 await Notification.create({
                     userId: user._id,
                     title: title,
-                    body: messageBody,
+                    body: body,
                     type: "rashi"
                 });
-                
-                successCount++;
-            } catch (error) {
-                console.error(`Error sending message to ${user.name} (${user.mobile}):`, error.message);
-                failCount++;
+            } catch (dbErr) {
+                console.error(`DB notification save error for ${user._id}:`, dbErr.message);
+            }
+
+            // 2. Send Push Notification via Firebase if user has fcmToken
+            if (user.fcmToken && user.fcmToken.trim() !== "") {
+                const message = {
+                    token: user.fcmToken,
+                    notification: {
+                        title: title,
+                        body: body
+                    },
+                    android: {
+                        priority: "high"
+                    },
+                    data: {
+                        type: 'rashi',
+                        sign: (user.rashi || '').toLowerCase()
+                    }
+                };
+
+                try {
+                    await getMessaging().send(message);
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error sending push notification to ${user.name} (${user.mobile}):`, error.message);
+                    failCount++;
+                }
             }
         }
 
-        console.log(`Daily Rashi Notifications finished. Success: ${successCount}, Failed: ${failCount}`);
+        console.log(`Daily Rashi Notifications finished. Sent push to: ${successCount}, Failed: ${failCount}`);
         
     } catch (error) {
-         console.error("Error fetching users for notifications:", error.message);
+         console.error("Error running daily rashi notifications:", error.message);
     }
 }
 
-// Schedule the task to run every day at 7:00 AM
-// "0 7 * * *" means 7:00 AM every day
+// Schedule the task to run every day at 8:00 AM
+// "0 8 * * *" means 8:00 AM every day
 const startNotificationJob = () => {
-    cron.schedule('0 7 * * *', () => {
+    cron.schedule('0 8 * * *', () => {
+        console.log("Triggering scheduled 8:00 AM Rashi Notifications...");
         sendDailyNotifications();
     });
-    console.log("Rashi Notification Cron Job scheduled for 7:00 AM daily.");
+    console.log("Rashi Notification Cron Job scheduled for 8:00 AM daily.");
 };
 
 module.exports = { startNotificationJob, sendDailyNotifications };

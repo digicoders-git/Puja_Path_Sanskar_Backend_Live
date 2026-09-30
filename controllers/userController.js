@@ -2,6 +2,7 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const { OAuth2Client } = require("google-auth-library");
+const { getBaseUrl, formatMediaUrl } = require("../utils/urlHelper");
 const CLIENT_ID = "335340683871-lllb03nursf6gg2emukftfmkgcuosiri.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
 
@@ -227,8 +228,7 @@ const updateMyProfile = async (req, res) => {
 
     // Image handling
     if (req.file) {
-      //       user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-      user.profileImage = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+      user.profileImage = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
     }
 
     if (mobile !== undefined) {

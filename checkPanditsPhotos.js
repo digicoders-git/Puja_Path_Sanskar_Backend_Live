@@ -4,8 +4,10 @@ const Pandit = require('./models/Pandit');
 
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
-    const pandits = await Pandit.find({}).sort({ createdAt: -1 }).select('fullName profilePhoto idProof pujaPhotos');
-    console.log(JSON.stringify(pandits.slice(0, 10), null, 2));
+    const pandits = await Pandit.find({}).select('fullName profilePhoto idProof');
+    pandits.forEach(p => {
+      console.log(`[${p.fullName}]: profilePhoto -> "${p.profilePhoto}" | idProof -> "${p.idProof}"`);
+    });
     process.exit(0);
   })
   .catch(err => {

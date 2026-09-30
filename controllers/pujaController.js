@@ -1,4 +1,5 @@
 const Puja = require("../models/Puja");
+const { getBaseUrl, formatMediaUrl } = require("../utils/urlHelper");
 
 // Create Puja
 const createPuja = async (req, res) => {
@@ -14,8 +15,7 @@ const createPuja = async (req, res) => {
       requiredMaterials: req.body.requiredMaterials,
       auspiciousTime: req.body.auspiciousTime,
       basePrice: req.body.basePrice || 0,
-      //       image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
-      image: req.file ? `https://api.pujapathsanskar.com/uploads/${req.file.filename}` : "",
+      image: req.file ? `${getBaseUrl(req)}/uploads/${req.file.filename}` : "",
       isTrending: req.body.isTrending === "true" || req.body.isTrending === true,
     });
     res.status(201).json(puja);
@@ -24,21 +24,13 @@ const createPuja = async (req, res) => {
   }
 };
 
-// Helper to format image URL
-const formatImageUrl = (image) => {
-  if (!image) return "";
-  if (image.startsWith("http")) return image;
-  //   return `https://api.pujapathsanskar.com/${image.replace(/\\/g, "/")}`;
-  return `https://api.pujapathsanskar.com/${image.replace(/\\/g, "/")}`;
-};
-
 // Get All Pujas
 const getAllPujas = async (req, res) => {
   try {
     const pujas = await Puja.find().sort({ createdAt: -1 });
     const formattedPujas = pujas.map(puja => ({
       ...puja._doc,
-      image: formatImageUrl(puja.image)
+      image: formatMediaUrl(puja.image, req)
     }));
     res.json(formattedPujas);
   } catch (error) {
@@ -52,7 +44,7 @@ const getTrendingPujas = async (req, res) => {
     const pujas = await Puja.find({ isTrending: true, isActive: true }).sort({ createdAt: -1 });
     const formattedPujas = pujas.map(puja => ({
       ...puja._doc,
-      image: formatImageUrl(puja.image)
+      image: formatMediaUrl(puja.image, req)
     }));
     res.json(formattedPujas);
   } catch (error) {
@@ -68,7 +60,7 @@ const getPujaById = async (req, res) => {
 
     const formattedPuja = {
       ...puja._doc,
-      image: formatImageUrl(puja.image)
+      image: formatMediaUrl(puja.image, req)
     };
     res.json(formattedPuja);
   } catch (error) {
@@ -89,11 +81,13 @@ const updatePuja = async (req, res) => {
       puja.isTrending = req.body.isTrending === "true" || req.body.isTrending === true;
     }
 
-    //     if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
-    if (req.file) puja.image = `https://api.pujapathsanskar.com/uploads/${req.file.filename}`;
+    if (req.file) puja.image = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
 
     const updated = await puja.save();
-    res.json(updated);
+    res.json({
+      ...updated._doc,
+      image: formatMediaUrl(updated.image, req)
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

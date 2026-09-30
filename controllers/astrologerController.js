@@ -1,9 +1,10 @@
 const Astrologer = require("../models/Astrologer");
 const fs = require("fs");
 const path = require("path");
+const { getBaseUrl, formatMediaUrl } = require("../utils/urlHelper");
 
 // Helper to convert base64 image to file and return URL
-const processBase64Image = (base64String) => {
+const processBase64Image = (base64String, req) => {
   if (base64String && base64String.startsWith('data:image')) {
     try {
       const matches = base64String.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
@@ -19,7 +20,7 @@ const processBase64Image = (base64String) => {
         }
         
         fs.writeFileSync(filepath, data);
-        return `http://localhost:5000/uploads/${filename}`;
+        return `/uploads/${filename}`;
       }
     } catch (e) {
       console.log("Error processing base64 image:", e);
@@ -33,21 +34,29 @@ exports.createAstrologer = async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.image) {
-      data.image = processBase64Image(data.image);
+      data.image = processBase64Image(data.image, req);
     }
     const astrologer = new Astrologer(data);
     await astrologer.save();
-    res.status(201).json({ success: true, message: "Astrologer created successfully", astrologer });
+    res.status(201).json({ success: true, message: "Astrologer created successfully", astrologer: formatAstrologerMedia(astrologer, req) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const formatAstrologerMedia = (astrologer, req) => {
+  const a = astrologer._doc ? astrologer._doc : astrologer;
+  return {
+    ...a,
+    image: formatMediaUrl(a.image, req),
+  };
 };
 
 // Get all Astrologers (Admin)
 exports.getAllAstrologers = async (req, res) => {
   try {
     const astrologers = await Astrologer.find().sort({ createdAt: -1 });
-    res.status(200).json({ success: true, astrologers });
+    res.status(200).json({ success: true, astrologers: astrologers.map(a => formatAstrologerMedia(a, req)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -57,7 +66,7 @@ exports.getAllAstrologers = async (req, res) => {
 exports.getActiveAstrologers = async (req, res) => {
   try {
     const astrologers = await Astrologer.find({ status: "online" });
-    res.status(200).json({ success: true, astrologers });
+    res.status(200).json({ success: true, astrologers: astrologers.map(a => formatAstrologerMedia(a, req)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -68,11 +77,11 @@ exports.updateAstrologer = async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.image) {
-      data.image = processBase64Image(data.image);
+      data.image = processBase64Image(data.image, req);
     }
     const astrologer = await Astrologer.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!astrologer) return res.status(404).json({ success: false, message: "Astrologer not found" });
-    res.status(200).json({ success: true, message: "Astrologer updated", astrologer });
+    res.status(200).json({ success: true, message: "Astrologer updated", astrologer: formatAstrologerMedia(astrologer, req) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
