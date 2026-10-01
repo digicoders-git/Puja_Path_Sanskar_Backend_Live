@@ -77,6 +77,7 @@ const createBookingWithPayment = async (req, res) => {
       message: "Razorpay order ready. 25% advance payment karo.",
       payment: {
         razorpayOrderId: razorpayOrder.id,
+        razorpayAmountPaise: razorpayOrder.amount, // exact paise from Razorpay (advanceAmount * 100)
         originalAmount: Number(amount),
         discountAmount,
         youSaved: discountAmount,
