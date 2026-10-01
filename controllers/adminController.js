@@ -182,24 +182,30 @@ const sendPushNotification = async (req, res) => {
 
     let successCount = 0;
     let failureCount = 0;
+    
+    // FCM requires a full URL for the image property
+    let fullImageUrl = null;
+    if (imageUrl) {
+      fullImageUrl = getBaseUrl(req) + imageUrl;
+    }
 
     if (tokens.length === 1) {
       const message = {
-        notification: { title, body, ...(imageUrl && { image: imageUrl }) },
+        notification: { title, body, ...(fullImageUrl && { image: fullImageUrl }) },
         android: { priority: "high" },
-        data: { type: notificationType, ...(imageUrl && { imageUrl: imageUrl }) },
+        data: { type: notificationType, ...(fullImageUrl && { imageUrl: fullImageUrl }) },
         token: tokens[0]
       };
       await messaging.send(message);
       successCount = 1;
     } else {
       const message = {
-        notification: { title, body, ...(imageUrl && { image: imageUrl }) },
+        notification: { title, body, ...(fullImageUrl && { image: fullImageUrl }) },
         android: { priority: "high" },
-        data: { type: notificationType, ...(imageUrl && { imageUrl: imageUrl }) },
+        data: { type: notificationType, ...(fullImageUrl && { imageUrl: fullImageUrl }) },
         tokens: tokens
       };
-      const response = await messaging.sendEachForMulticast(message);
+      const response = await messaging.sendMulticast(message);
       successCount = response.successCount;
       failureCount = response.failureCount;
     }
@@ -211,7 +217,8 @@ const sendPushNotification = async (req, res) => {
     });
   } catch (error) {
     console.error("Send Push Notification Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    // Returning 400 instead of 500 so Nginx doesn't override with HTML
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
