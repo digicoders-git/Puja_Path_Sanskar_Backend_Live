@@ -45,12 +45,12 @@ const createBookingWithPayment = async (req, res) => {
       }
     }
 
-    const advanceAmount = finalAmount;
-    const remainingAmount = 0;
+    const advanceAmount = Math.round(finalAmount * 0.25);
+    const remainingAmount = finalAmount - advanceAmount;
 
-    // Razorpay order banao, booking details notes mein rakho
+    // Razorpay order banao (25% advance), booking details notes mein rakho
     const razorpayOrder = await razorpay.orders.create({
-      amount: finalAmount * 100,
+      amount: advanceAmount * 100,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
       notes: {
@@ -74,7 +74,7 @@ const createBookingWithPayment = async (req, res) => {
     // ❌ Booking DB mein SAVE NAHI hogi jab tak payment verify na ho
     res.status(200).json({
       success: true,
-      message: "Razorpay order ready. Booking tabhi banegi jab payment verify hogi.",
+      message: "Razorpay order ready. 25% advance payment karo.",
       payment: {
         razorpayOrderId: razorpayOrder.id,
         originalAmount: Number(amount),
@@ -130,27 +130,27 @@ const verifyPayment = async (req, res) => {
       offer: notes.offerId || null,
       discountAmount: Number(notes.discountAmount) || 0,
       amount: Number(notes.amount),
-      advanceAmount: Number(notes.advanceAmount) || Number(notes.amount),
-      remainingAmount: Number(notes.remainingAmount) || 0,
+      advanceAmount: Number(notes.advanceAmount),
+      remainingAmount: Number(notes.remainingAmount),
       specialInstructions: notes.specialInstructions,
       razorpayOrderId: razorpayOrderId,
       razorpayPaymentId: razorpayPaymentId,
       status: "Confirmed",
-      paymentStatus: "Paid",
+      paymentStatus: "AdvancePaid",
     });
 
     await booking.save();
 
-    // ✅ Amount Admin wallet mein add karo
+    // ✅ 25% Advance Amount Admin wallet mein add karo
     const admin = await Admin.findOne();
     if (admin) {
-      admin.walletBalance = (admin.walletBalance || 0) + booking.amount;
+      admin.walletBalance = (admin.walletBalance || 0) + booking.advanceAmount;
       await admin.save();
     }
 
     res.status(201).json({
       success: true,
-      message: `Payment successful! Booking confirmed.`,
+      message: `25% advance payment successful! Booking confirmed. Baaki ₹${booking.remainingAmount} puja ke din dena.`,
       booking,
     });
   } catch (error) {
