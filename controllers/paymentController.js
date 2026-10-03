@@ -145,7 +145,7 @@ const verifyPayment = async (req, res) => {
       specialInstructions: notes.specialInstructions,
       razorpayOrderId: razorpayOrderId,
       razorpayPaymentId: razorpayPaymentId,
-      status: "Confirmed",
+      status: "Pending",
       paymentStatus: isFullPayment ? "FullyPaid" : "AdvancePaid",
     });
 
