@@ -69,18 +69,26 @@ const initiateMaskedCall = async (req, res) => {
       });
     }
 
-    // Prepare status callback URL if BASE_URL is reachable
+    // Public Base URL so Twilio's cloud servers can fetch the TwiML instructions
+    const baseUrl =
+      process.env.BASE_URL && !process.env.BASE_URL.includes("localhost")
+        ? process.env.BASE_URL
+        : "https://api.pujapathsanskar.com";
+
+    const twimlUrl = `${baseUrl}/api/calls/bridge-twiml/${booking._id}`;
+
     let statusCallbackUrl = undefined;
-    if (process.env.BASE_URL && !process.env.BASE_URL.includes("localhost")) {
-      statusCallbackUrl = `${process.env.BASE_URL}/api/calls/status-callback`;
+    if (baseUrl && !baseUrl.includes("localhost")) {
+      statusCallbackUrl = `${baseUrl}/api/calls/status-callback`;
     }
 
-    // Call Twilio Service to bridge User and Pandit
+    // Call Twilio Service to bridge User and Pandit via URL
     const result = await twilioService.initiateMaskedCall({
       userPhone,
       panditPhone,
       userName: booking.user.name || "भक्त जन",
       panditName: booking.pandit.fullName || "पंडित जी",
+      twimlUrl,
       statusCallbackUrl,
     });
 
@@ -107,14 +115,53 @@ const initiateMaskedCall = async (req, res) => {
     });
   } catch (error) {
     console.error("Masked Call Error:", error);
+
+    // Provide friendly advice if trial account verification issue occurs
+    let userMsg = error.message || "कॉल कनेक्ट करने में त्रुटि हुई।";
+    if (error.code === 21215 || error.message?.includes("unverified")) {
+      userMsg = "Twilio Trial खाता होने के कारण दोनों नंबर (यूज़र और पंडित) Twilio Console में Verified होने चाहिए।";
+    }
+
     return res.status(500).json({
       success: false,
-      message: error.message || "कॉल कनेक्ट करने में त्रुटि हुई। कृपया पुनः प्रयास करें।",
+      message: userMsg,
     });
   }
 };
 
-// 2. Twilio Inbound Webhook (When user or pandit dials Twilio Virtual Number directly)
+// 2. Public Bridge TwiML Endpoint (Twilio Cloud fetches this when user answers)
+const getBridgeTwiML = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await Booking.findById(bookingId)
+      .populate("pandit", "fullName mobileNumber")
+      .populate("user", "name mobile");
+
+    if (!booking || !booking.pandit || !booking.pandit.mobileNumber) {
+      res.type("text/xml");
+      return res.send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN">पंडित जी का नंबर उपलब्ध नहीं है। कृपया ऐप से सहायता लें।</Say></Response>`
+      );
+    }
+
+    const xml = twilioService.generateBridgeTwiML({
+      userName: (booking.user && booking.user.name) || "भक्त जन",
+      panditName: (booking.pandit && booking.pandit.fullName) || "पंडित जी",
+      panditPhone: booking.pandit.mobileNumber,
+    });
+
+    res.type("text/xml");
+    return res.send(xml);
+  } catch (error) {
+    console.error("Bridge TwiML Error:", error);
+    res.type("text/xml");
+    return res.send(
+      `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN">कॉल कनेक्ट करने में तकनीकी त्रुटि हुई।</Say></Response>`
+    );
+  }
+};
+
+// 3. Twilio Inbound Webhook (When user or pandit dials Twilio Virtual Number directly)
 const handleInboundWebhook = async (req, res) => {
   try {
     const callerRaw = req.body.From || "";
@@ -174,7 +221,7 @@ const handleInboundWebhook = async (req, res) => {
   }
 };
 
-// 3. Status Callback (Twilio Webhook for Call Completion & Duration)
+// 4. Status Callback (Twilio Webhook for Call Completion & Duration)
 const handleStatusCallback = async (req, res) => {
   try {
     const { CallSid, CallStatus, CallDuration } = req.body;
@@ -194,7 +241,7 @@ const handleStatusCallback = async (req, res) => {
   }
 };
 
-// 4. Get Call History for a Booking
+// 5. Get Call History for a Booking
 const getBookingCallHistory = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -207,6 +254,7 @@ const getBookingCallHistory = async (req, res) => {
 
 module.exports = {
   initiateMaskedCall,
+  getBridgeTwiML,
   handleInboundWebhook,
   handleStatusCallback,
   getBookingCallHistory,

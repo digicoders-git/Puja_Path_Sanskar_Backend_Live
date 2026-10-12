@@ -63,17 +63,41 @@ function getClient() {
 }
 
 /**
+ * Builds TwiML XML for bridging user and pandit
+ */
+function generateBridgeTwiML({ userName = "भक्त जन", panditName = "पंडित जी", panditPhone }) {
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const response = new VoiceResponse();
+  const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+  const formattedPandit = formatToE164(panditPhone);
+
+  // Friendly greeting in Hindi
+  response.say(
+    { language: "hi-IN" },
+    `नमस्कार ${userName}। पूजा पाठ संस्कार में आपका स्वागत है। आपकी कॉल पंडित ${panditName} से सुरक्षित रूप से जोड़ी जा रही है, कृपया प्रतीक्षा करें।`
+  );
+
+  // Dial Pandit with Twilio Virtual Number as callerId
+  const dial = response.dial({
+    callerId: twilioNumber,
+    timeout: 35,
+  });
+  dial.number(formattedPandit);
+
+  return response.toString();
+}
+
+/**
  * Initiates an outbound bridged call:
- * 1. Twilio calls the User from Twilio Virtual Number (User sees only Twilio Number).
- * 2. User answers -> Twilio speaks welcome announcement.
- * 3. Twilio dials Pandit from Twilio Virtual Number (Pandit sees only Twilio Number).
- * 4. User and Pandit speak securely with 100% number masking!
+ * In Twilio Trial and Production, uses 'url' pointing to our public TwiML bridge route
+ * to guarantee compatibility across all Twilio account tiers!
  */
 async function initiateMaskedCall({
   userPhone,
   panditPhone,
   userName = "भक्त जन",
   panditName = "पंडित जी",
+  twimlUrl,
   statusCallbackUrl,
 }) {
   const client = getClient();
@@ -86,30 +110,19 @@ async function initiateMaskedCall({
     throw new Error("Invalid phone number format for user or pandit");
   }
 
-  // Build TwiML for connecting the two legs
-  const VoiceResponse = twilio.twiml.VoiceResponse;
-  const response = new VoiceResponse();
-
-  // Professional Hindu/Sanskrit greeting in Hindi
-  response.say(
-    { language: "hi-IN", voice: "Polly.Aditi" },
-    `नमस्कार ${userName}। पूजा पाठ संस्कार में आपका स्वागत है। आपकी कॉल पंडित ${panditName} से सुरक्षित रूप से जोड़ी जा रही है, कृपया लाइन पर बने रहें।`
-  );
-
-  // Dial Pandit with Twilio Virtual Number as callerId
-  const dial = response.dial({
-    callerId: twilioNumber, // Pandit sees Twilio number, NOT user's number!
-    timeout: 35,
-    record: "do-not-record",
-  });
-  dial.number(formattedPandit);
-
   // Create outbound call to User (User sees Twilio number, NOT pandit's number!)
   const callPayload = {
     to: formattedUser,
     from: twilioNumber,
-    twiml: response.toString(),
   };
+
+  // If a public twimlUrl is provided, use it (required for Twilio Trial accounts)
+  if (twimlUrl) {
+    callPayload.url = twimlUrl;
+  } else {
+    // Fallback inline TwiML
+    callPayload.twiml = generateBridgeTwiML({ userName, panditName, panditPhone });
+  }
 
   if (statusCallbackUrl) {
     callPayload.statusCallback = statusCallbackUrl;
@@ -137,7 +150,7 @@ function generateInboundBridgeTwiML({ targetPhone, isUserCalling, partyName }) {
 
   if (!targetPhone) {
     response.say(
-      { language: "hi-IN", voice: "Polly.Aditi" },
+      { language: "hi-IN" },
       "पूजा पाठ संस्कार में आपका स्वागत है। आपकी कोई सक्रिय बुकिंग नहीं पाई गई। कृपया ऐप से संपर्क करें।"
     );
     return response.toString();
@@ -147,7 +160,7 @@ function generateInboundBridgeTwiML({ targetPhone, isUserCalling, partyName }) {
     ? `नमस्कार। आपकी कॉल पंडित ${partyName || "जी"} से जोड़ी जा रही है।`
     : `नमस्कार पंडित जी। आपकी कॉल यजमान ${partyName || ""} से जोड़ी जा रही है।`;
 
-  response.say({ language: "hi-IN", voice: "Polly.Aditi" }, greeting);
+  response.say({ language: "hi-IN" }, greeting);
 
   const dial = response.dial({
     callerId: twilioNumber,
@@ -163,5 +176,6 @@ module.exports = {
   maskPhoneNumber,
   isConfigured,
   initiateMaskedCall,
+  generateBridgeTwiML,
   generateInboundBridgeTwiML,
 };
