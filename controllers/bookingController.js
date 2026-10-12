@@ -3,6 +3,7 @@ const Puja = require("../models/Puja");
 const Pandit = require("../models/Pandit");
 const Address = require("../models/Address");
 const emailService = require("../services/emailService");
+const twilioService = require("../services/twilioService");
 
 // Create a new booking (User App)
 const createBooking = async (req, res) => {
@@ -92,10 +93,27 @@ const createBooking = async (req, res) => {
 // Get all bookings for a specific user (User App)
 const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user.id || req.user._id })
+    const rawBookings = await Booking.find({ user: req.user.id || req.user._id })
       .populate("puja", "pujaName pujaType image priceRange")
       .populate("pandit", "fullName mobileNumber whatsappNumber profilePhoto city state latitude longitude currentAddress mapAddress")
       .sort({ createdAt: -1 });
+
+    // Mask Pandit phone numbers for user privacy and security
+    const virtualPhone = process.env.TWILIO_PHONE_NUMBER || "+17372508034";
+    const bookings = rawBookings.map((b) => {
+      const bObj = b.toObject();
+      if (bObj.pandit) {
+        const rawPanditPhone = bObj.pandit.mobileNumber || "";
+        bObj.pandit.hasPhone = Boolean(rawPanditPhone);
+        bObj.pandit.isMasked = true;
+        bObj.pandit.virtualPhone = virtualPhone;
+        // User sees masked digits - never raw private phone
+        bObj.pandit.maskedPhone = rawPanditPhone ? twilioService.maskPhoneNumber(rawPanditPhone) : "";
+        bObj.pandit.mobileNumber = bObj.pandit.maskedPhone;
+        bObj.pandit.whatsappNumber = ""; // Hide personal WhatsApp to enforce call masking
+      }
+      return bObj;
+    });
 
     res.status(200).json({ success: true, bookings });
   } catch (error) {

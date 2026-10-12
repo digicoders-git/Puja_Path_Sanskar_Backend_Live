@@ -70,6 +70,7 @@ app.use("/api/offers", require("./routes/offerRoutes"));
 app.use("/api/puja-types", require("./routes/pujaTypeRoutes"));
 app.use("/api/addresses", require("./routes/addressRoutes"));
 app.use("/api/horoscope", require("./routes/horoscope.routes"));
+app.use("/api/calls", require("./routes/callRoutes"));
 
 // Initialize Cron Jobs
 require("./cron/horoscope.cron");
