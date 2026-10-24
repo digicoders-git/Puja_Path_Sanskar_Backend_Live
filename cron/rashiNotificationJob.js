@@ -4,59 +4,11 @@ const cron = require('node-cron');
 const path = require('path');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-
-// Function to generate daily Rashi text based on sign
-function getDailyRashiMessage(name, rashi) {
-    const messages = {
-        'aries': 'मेष राशि: आज का दिन नए अवसर और सकारात्मक ऊर्जा लाएगा।',
-        'mesh': 'मेष राशि: आज का दिन नए अवसर और सकारात्मक ऊर्जा लाएगा।',
-        'taurus': 'वृषभ राशि: आज धन लाभ और कार्यक्षेत्र में उन्नति के योग हैं।',
-        'vrishabh': 'वृषभ राशि: आज धन लाभ और कार्यक्षेत्र में उन्नति के योग हैं।',
-        'gemini': 'मिथुन राशि: आज मित्रों से सहयोग और शुभ समाचार मिलेगा।',
-        'mithun': 'मिथुन राशि: आज मित्रों से सहयोग और शुभ समाचार मिलेगा।',
-        'cancer': 'कर्क राशि: आज का दिन शांतिपूर्ण रहेगा, परिवार का साथ मिलेगा।',
-        'kark': 'कर्क राशि: आज का दिन शांतिपूर्ण रहेगा, परिवार का साथ मिलेगा।',
-        'leo': 'सिंह राशि: आज आत्मविश्वास बढ़ेगा और कार्यों में सफलता मिलेगी।',
-        'singh': 'सिंह राशि: आज आत्मविश्वास बढ़ेगा और कार्यों में सफलता मिलेगी।',
-        'virgo': 'कन्या राशि: आज स्वास्थ्य का ध्यान रखें और योजनाबद्ध कार्य करें।',
-        'kanya': 'कन्या राशि: आज स्वास्थ्य का ध्यान रखें और योजनाबद्ध कार्य करें।',
-        'libra': 'तुला राशि: आज परिवार के साथ सुखद समय बीतेगा, व्यापार में लाभ होगा।',
-        'tula': 'तुला राशि: आज परिवार के साथ सुखद समय बीतेगा, व्यापार में लाभ होगा।',
-        'scorpio': 'वृश्चिक राशि: आज आर्थिक लाभ और नए कार्य प्रारंभ करने का उत्तम समय है।',
-        'vrishchik': 'वृश्चिक राशि: आज आर्थिक लाभ और नए कार्य प्रारंभ करने का उत्तम समय है।',
-        'sagittarius': 'धनु राशि: आज ज्ञान और भाग्य का साथ मिलेगा, यात्रा सुखद रहेगी।',
-        'dhanu': 'धनु राशि: आज ज्ञान और भाग्य का साथ मिलेगा, यात्रा सुखद रहेगी।',
-        'capricorn': 'मकर राशि: आज आपकी मेहनत रंग लाएगी, पद-प्रतिष्ठा में वृद्धि होगी।',
-        'makar': 'मकर राशि: आज आपकी मेहनत रंग लाएगी, पद-प्रतिष्ठा में वृद्धि होगी।',
-        'aquarius': 'कुंभ राशि: आज रचनात्मक विचारों से लाभ होगा, दिन शुभ रहेगा।',
-        'kumbh': 'कुंभ राशि: आज रचनात्मक विचारों से लाभ होगा, दिन शुभ रहेगा।',
-        'pisces': 'मीन राशि: आज आध्यात्मिक शांति और मनोकामना पूर्ति के योग हैं।',
-        'meen': 'मीन राशि: आज आध्यात्मिक शांति और मनोकामना पूर्ति के योग हैं।'
-    };
-
-    let rashiClean = (rashi || '').toString().trim().toLowerCase();
-    // Normalize common hindi script rashis
-    const hindiMap = {
-        'मेष': 'aries', 'वृषभ': 'taurus', 'मिथुन': 'gemini', 'कर्क': 'cancer',
-        'सिंह': 'leo', 'कन्या': 'virgo', 'तुला': 'libra', 'वृश्चिक': 'scorpio',
-        'धनु': 'sagittarius', 'मकर': 'capricorn', 'कुंभ': 'aquarius', 'मीन': 'pisces'
-    };
-    if (hindiMap[rashiClean]) {
-        rashiClean = hindiMap[rashiClean];
-    }
-
-    const prediction = messages[rashiClean] || 'आज का दिन आपके लिए मंगलमय और शुभ रहेगा।';
-    const userName = (name && name.trim().length > 0) ? name.trim() : 'भक्त';
-
-    return {
-        title: rashi ? `आज का राशिफल (${rashi})` : 'आज का दैनिक राशिफल ॐ',
-        body: `नमस्ते ${userName} जी! ${prediction} अपना पूरा राशिफल और उपाय जानने के लिए ऐप खोलें।`
-    };
-}
+const tathaastuService = require('../services/tathaastu.service');
 
 // Send Notifications
 async function sendDailyNotifications() {
-    console.log("Starting daily 8:00 AM Rashi notifications job...");
+    console.log("Starting daily 8:00 AM Rashi notifications job with live TathaAstu Panchang...");
     
     try {
         // Find active users
@@ -67,7 +19,16 @@ async function sendDailyNotifications() {
         let failCount = 0;
 
         for (const user of users) {
-            const { title, body } = getDailyRashiMessage(user.name, user.rashi);
+            let title, body;
+            try {
+                const liveNotif = await tathaastuService.getDailyRashiNotificationMessage(user.name, user.rashi);
+                title = liveNotif.title;
+                body = liveNotif.body;
+            } catch (err) {
+                console.error("Error generating live notification for user:", user._id, err.message);
+                title = user.rashi ? `आज का राशिफल (${user.rashi}) 🔮` : 'आज का दैनिक राशिफल ॐ';
+                body = `नमस्ते ${user.name || 'भक्त'} जी! आज का दिन आपके लिए मंगलमय और शुभ रहे। अपना दैनिक राशिफल और उपाय देखने के लिए ऐप खोलें।`;
+            }
             
             // 1. Always save in-app notification in DB so user sees it in notifications page
             try {
