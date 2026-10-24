@@ -1,4 +1,3 @@
-const prokeralaService = require('../services/prokerala.service');
 const tathaastuService = require('../services/tathaastu.service');
 const HoroscopeCache = require('../models/HoroscopeCache2');
 
@@ -8,25 +7,10 @@ const validSigns = [
   'sagittarius', 'capricorn', 'aquarius', 'pisces'
 ];
 
-const generateMissingFields = (prediction, type) => {
-  const colors = ["लाल (Red)", "नीला (Blue)", "हरा (Green)", "पीला (Yellow)", "सफेद (White)", "गुलाबी (Pink)", "काला (Black)"];
-  const moods = ["खुश (Happy)", "शांत (Calm)", "ऊर्जावान (Energetic)", "विचारशील (Thoughtful)", "उत्साही (Enthusiastic)"];
-  const remedies = ["सूर्य को जल चढ़ाएं।", "हनुमान चालीसा का पाठ करें।", "गाय को रोटी खिलाएं।", "शिवलिंग पर जल चढ़ाएं।", "माथे पर चंदन लगाएं।"];
-  
-  const seed = (prediction.length || 0);
-  
-  return {
-    lucky_number: ((seed % 9) + 1).toString(),
-    lucky_color: colors[seed % colors.length],
-    lucky_time: `${((seed % 10) + 1)}:00 PM - ${((seed % 10) + 2)}:00 PM`,
-    remedy: remedies[seed % remedies.length],
-    mood: moods[seed % moods.length],
-    finance: "आर्थिक स्थिति सामान्य रहेगी, अनावश्यक खर्चों से बचें।",
-    compatibility: "Cancer, Scorpio, Pisces"
-  };
-};
-
-// Daily Horoscope powered by TathaAstu Panchang & Vedic rules
+/**
+ * Daily Horoscope (100% TathaAstu Panchang & Vedic rules)
+ * GET /api/horoscope/daily/:sign
+ */
 exports.getDaily = async (req, res) => {
   const { sign } = req.params;
   const cleanSign = (sign || '').toLowerCase().trim();
@@ -40,100 +24,125 @@ exports.getDaily = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Success',
-      source: result.source || 'tathaastu',
+      source: result.source || 'tathaastu-vedic',
       data: result.data
     });
   } catch (error) {
     console.error(`Horoscope getDaily Error:`, error.message);
-    return res.status(500).json({ success: false, message: 'Failed to fetch horoscope' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch daily horoscope' });
   }
 };
 
-const handleHoroscopeRequest = async (req, res, type, serviceFn) => {
+/**
+ * Weekly Horoscope (TathaAstu Vedic)
+ * GET /api/horoscope/weekly/:sign
+ */
+exports.getWeekly = async (req, res) => {
   const { sign } = req.params;
+  const cleanSign = (sign || '').toLowerCase().trim();
 
-  if (!validSigns.includes(sign.toLowerCase())) {
+  if (!validSigns.includes(cleanSign)) {
     return res.status(400).json({ success: false, message: 'Invalid zodiac sign' });
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const cached = await HoroscopeCache.findOne({ sign: sign.toLowerCase(), type, date: today });
-    if (cached) {
-      return res.status(200).json({
-        success: true,
-        message: 'Success',
-        source: 'cache',
-        data: cached.data
-      });
-    }
-
-    let rawPrediction = '';
-    let lovePred = '';
-    let careerPred = '';
-    let healthPred = '';
-
-    try {
-      const prokeralaData = await serviceFn(sign.toLowerCase());
-      rawPrediction = prokeralaData?.data?.daily_prediction?.prediction 
-                      || prokeralaData?.data?.prediction 
-                      || prokeralaData?.data?.horoscope?.prediction || '';
-      lovePred = prokeralaData?.data?.daily_prediction?.love_prediction || '';
-      careerPred = prokeralaData?.data?.daily_prediction?.career_prediction || '';
-      healthPred = prokeralaData?.data?.daily_prediction?.health_prediction || '';
-    } catch (_) {
-      // Fallback to TathaAstu daily reading if Prokerala fails
-      const tathaData = await tathaastuService.getDailyHoroscope(sign.toLowerCase());
-      rawPrediction = tathaData.data?.overall || 'आज का दिन शुभ रहेगा।';
-      lovePred = tathaData.data?.love || 'प्रेम जीवन सुखमय रहेगा।';
-      careerPred = tathaData.data?.career || 'कार्यक्षेत्र में सफलता मिलेगी।';
-      healthPred = tathaData.data?.health || 'स्वास्थ्य उत्तम रहेगा।';
-    }
-
-    const aiFields = generateMissingFields(rawPrediction, type);
-
-    const formattedData = {
-      overall: rawPrediction,
-      love: lovePred || 'प्रेम जीवन सुखमय रहेगा।',
-      career: careerPred || 'कार्यक्षेत्र में सफलता मिलेगी।',
-      health: healthPred || 'स्वास्थ्य उत्तम रहेगा।',
-      finance: aiFields.finance,
-      lucky_number: aiFields.lucky_number,
-      lucky_color: aiFields.lucky_color,
-      lucky_time: aiFields.lucky_time,
-      remedy: aiFields.remedy,
-      mood: aiFields.mood,
-      compatibility: aiFields.compatibility
-    };
-
-    try {
-      await HoroscopeCache.create({
-        sign: sign.toLowerCase(),
-        type,
-        date: today,
-        data: formattedData
-      });
-    } catch (_) {}
-
+    const result = await tathaastuService.getWeeklyHoroscope(cleanSign);
     return res.status(200).json({
       success: true,
       message: 'Success',
-      data: formattedData
+      source: result.source,
+      data: result.data
     });
-
   } catch (error) {
-    console.error(`Horoscope Controller Error [${type}]:`, error.message);
-    return res.status(500).json({ success: false, message: 'Something went wrong' });
+    console.error(`Horoscope getWeekly Error:`, error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch weekly horoscope' });
   }
 };
 
-exports.getWeekly = (req, res) => handleHoroscopeRequest(req, res, 'weekly', prokeralaService.getWeeklyHoroscope);
-exports.getMonthly = (req, res) => handleHoroscopeRequest(req, res, 'monthly', prokeralaService.getMonthlyHoroscope);
-exports.getLove = (req, res) => handleHoroscopeRequest(req, res, 'love', prokeralaService.getLoveHoroscope);
-exports.getCareer = (req, res) => handleHoroscopeRequest(req, res, 'career', prokeralaService.getCareerHoroscope);
-exports.getHealth = (req, res) => handleHoroscopeRequest(req, res, 'health', prokeralaService.getHealthHoroscope);
+/**
+ * Monthly Horoscope (TathaAstu Vedic)
+ * GET /api/horoscope/monthly/:sign
+ */
+exports.getMonthly = async (req, res) => {
+  const { sign } = req.params;
+  const cleanSign = (sign || '').toLowerCase().trim();
 
+  if (!validSigns.includes(cleanSign)) {
+    return res.status(400).json({ success: false, message: 'Invalid zodiac sign' });
+  }
+
+  try {
+    const result = await tathaastuService.getMonthlyHoroscope(cleanSign);
+    return res.status(200).json({
+      success: true,
+      message: 'Success',
+      source: result.source,
+      data: result.data
+    });
+  } catch (error) {
+    console.error(`Horoscope getMonthly Error:`, error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch monthly horoscope' });
+  }
+};
+
+/**
+ * Love Horoscope
+ * GET /api/horoscope/love/:sign
+ */
+exports.getLove = async (req, res) => {
+  const { sign } = req.params;
+  const cleanSign = (sign || '').toLowerCase().trim();
+  if (!validSigns.includes(cleanSign)) {
+    return res.status(400).json({ success: false, message: 'Invalid zodiac sign' });
+  }
+  try {
+    const result = await tathaastuService.getCategoryHoroscope(cleanSign, 'love');
+    return res.status(200).json({ success: true, message: 'Success', data: result.data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Career Horoscope
+ * GET /api/horoscope/career/:sign
+ */
+exports.getCareer = async (req, res) => {
+  const { sign } = req.params;
+  const cleanSign = (sign || '').toLowerCase().trim();
+  if (!validSigns.includes(cleanSign)) {
+    return res.status(400).json({ success: false, message: 'Invalid zodiac sign' });
+  }
+  try {
+    const result = await tathaastuService.getCategoryHoroscope(cleanSign, 'career');
+    return res.status(200).json({ success: true, message: 'Success', data: result.data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Health Horoscope
+ * GET /api/horoscope/health/:sign
+ */
+exports.getHealth = async (req, res) => {
+  const { sign } = req.params;
+  const cleanSign = (sign || '').toLowerCase().trim();
+  if (!validSigns.includes(cleanSign)) {
+    return res.status(400).json({ success: false, message: 'Invalid zodiac sign' });
+  }
+  try {
+    const result = await tathaastuService.getCategoryHoroscope(cleanSign, 'health');
+    return res.status(200).json({ success: true, message: 'Success', data: result.data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Vedic Compatibility (Guna Milan)
+ * GET /api/horoscope/compatibility?sign1=...&sign2=...
+ */
 exports.getCompatibility = async (req, res) => {
   const { sign1, sign2 } = req.query;
 
@@ -142,20 +151,22 @@ exports.getCompatibility = async (req, res) => {
   }
 
   try {
-    const prokeralaData = await prokeralaService.getCompatibility(sign1.toLowerCase(), sign2.toLowerCase());
-    
+    const result = await tathaastuService.getCompatibility(sign1.toLowerCase(), sign2.toLowerCase());
     return res.status(200).json({
       success: true,
       message: 'Success',
-      data: prokeralaData?.data || prokeralaData
+      data: result.data
     });
-
   } catch (error) {
     console.error(`Compatibility Controller Error:`, error.message);
-    return res.status(500).json({ success: false, message: 'Something went wrong' });
+    return res.status(500).json({ success: false, message: 'Failed to calculate compatibility' });
   }
 };
 
+/**
+ * Get Today's Horoscope for All Signs
+ * GET /api/horoscope/today-all
+ */
 exports.getTodayAll = async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -166,6 +177,6 @@ exports.getTodayAll = async (req, res) => {
       data
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Something went wrong' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch horoscopes' });
   }
 };

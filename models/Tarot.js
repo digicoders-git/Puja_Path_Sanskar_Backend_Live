@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 /**
  * Tarot Model
- * Used to cache daily tarot predictions from Prokerala API for 24 hours.
+ * Used to cache daily tarot predictions from TathaAstu Vedic API for 24 hours.
  */
 const tarotSchema = new mongoose.Schema({
   sign: {

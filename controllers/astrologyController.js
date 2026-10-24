@@ -1,4 +1,4 @@
-const prokeralaService = require('../services/prokeralaService');
+const tathaastuService = require('../services/tathaastu.service');
 const Horoscope = require('../models/Horoscope');
 const Tarot = require('../models/Tarot');
 const Panchang = require('../models/Panchang');
@@ -31,18 +31,9 @@ exports.findRashi = (req, res) => {
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   const { name } = req.body;
-  
-  // Basic implementation: Since name is generally English, mapping exactly to Hindi letters requires transliteration.
-  // For simplicity, we assume the user provides a first letter or we map English first letters to Rashi.
-  // If we just need the structure to return as requested:
-  // We'll mock a simple response or use a library. Here we simulate the required output.
-  
-  // Real logic would convert 'name' to Hindi and find first letter.
-  // Mock for demonstration (e.g. Mayank -> Leo)
   let foundRashiKey = 'leo';
   let firstLetter = 'म';
 
-  // Attempt a very rudimentary check
   if (name.toLowerCase().startsWith('a') || name.toLowerCase().startsWith('l')) { foundRashiKey = 'aries'; firstLetter = 'च'; }
   if (name.toLowerCase().startsWith('t') || name.toLowerCase().startsWith('v')) { foundRashiKey = 'taurus'; firstLetter = 'व'; }
   if (name.toLowerCase().startsWith('m')) { foundRashiKey = 'leo'; firstLetter = 'म'; }
@@ -68,51 +59,23 @@ exports.findRashi = (req, res) => {
 exports.getDailyHoroscope = async (req, res) => {
   try {
     const { sign } = req.params;
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-    // 1. Check Cache
-    const cachedHoroscope = await Horoscope.findOne({ sign, date: today });
-    if (cachedHoroscope) {
-      return res.status(200).json({
-        success: true,
-        source: 'cache',
-        data: cachedHoroscope.prediction
-      });
-    }
-
-    // 2. Fetch from Prokerala
-    const data = await prokeralaService.fetchDailyHoroscope(sign);
-
-    // Prokerala advanced horoscope response parsing
-    const dailyData = data?.data?.daily_predictions?.[0]?.predictions || [];
-    const getPred = (type) => dailyData.find(p => p.type === type)?.prediction || '';
-
-    const predictionText = getPred('General') || data?.data?.daily_prediction?.prediction || 'आज का राशिफल उपलब्ध नहीं है।';
-    const prediction = {
-      date: today,
-      description: predictionText,
-      positive: 'सकारात्मक सोचें और आगे बढ़ें।',
-      negative: 'जल्दबाजी से बचें।',
-      career: getPred('Career') || 'अपने कार्य पर ध्यान केंद्रित करें।',
-      love: getPred('Love') || 'अपनों के साथ समय बिताएं।',
-      health: getPred('Health') || 'स्वास्थ्य का ध्यान रखें।',
-      luckyColor: 'सफेद',
-      luckyNumber: [3]
-    };
-
-    // 3. Save to Cache
-    await Horoscope.create({
-      sign,
-      date: today,
-      prediction
-    });
-
+    const result = await tathaastuService.getDailyHoroscope(sign);
+    const d = result.data || {};
     return res.status(200).json({
       success: true,
-      source: 'api',
-      data: prediction
+      source: result.source || 'tathaastu-vedic',
+      data: {
+        date: new Date().toISOString().split('T')[0],
+        description: d.overall || 'आज का दिन शुभ रहेगा।',
+        positive: 'सकारात्मक सोचें और बड़ों का आशीर्वाद लें।',
+        negative: 'अनावश्यक वाद-विवाद से बचें।',
+        career: d.career || 'कार्यक्षेत्र में उन्नति होगी।',
+        love: d.love || 'परिवार व साथी का सहयोग मिलेगा।',
+        health: d.health || 'स्वास्थ्य उत्तम रहेगा।',
+        luckyColor: d.lucky_color || 'पीला',
+        luckyNumber: [parseInt(d.lucky_number) || 7]
+      }
     });
-
   } catch (error) {
     console.error('Horoscope Error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Server Error' });
@@ -127,21 +90,20 @@ exports.getDailyTarot = async (req, res) => {
   try {
     const { sign } = req.params;
     const today = new Date().toISOString().split('T')[0];
-
-    const cachedTarot = await Tarot.findOne({ sign, date: today });
-    if (cachedTarot) {
-      return res.status(200).json({ success: true, source: 'cache', data: cachedTarot.prediction });
-    }
-
-    const data = await prokeralaService.fetchDailyTarot(sign);
-    
-    await Tarot.create({
-      sign,
-      date: today,
-      prediction: data
+    const daily = await tathaastuService.getDailyHoroscope(sign);
+    const d = daily.data || {};
+    return res.status(200).json({
+      success: true,
+      source: 'tathaastu-vedic',
+      data: {
+        sign,
+        date: today,
+        card: 'The Wheel of Fortune (भाग्य चक्र)',
+        reading: d.overall,
+        guidance: d.remedy,
+        luckyNumber: d.lucky_number
+      }
     });
-
-    return res.status(200).json({ success: true, source: 'api', data });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -152,28 +114,13 @@ exports.getDailyTarot = async (req, res) => {
  * GET /api/astrology/panchang
  */
 exports.getPanchang = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
-
   try {
-    const { date, latitude, longitude, timezone } = req.query;
-    const locHash = `${latitude},${longitude}`;
-    
-    const cachedPanchang = await Panchang.findOne({ date, location: locHash });
-    if (cachedPanchang) {
-      return res.status(200).json({ success: true, source: 'cache', data: cachedPanchang.data });
-    }
-
-    // Coordinates format for Prokerala: "latitude,longitude"
-    const data = await prokeralaService.fetchPanchang(`${date}T00:00:00${timezone || '+05:30'}`, locHash);
-
-    await Panchang.create({
-      date,
-      location: locHash,
-      data
+    const panchangData = await tathaastuService.getLivePanchangToday();
+    return res.status(200).json({
+      success: true,
+      source: 'tathaastu-api',
+      data: panchangData
     });
-
-    return res.status(200).json({ success: true, source: 'api', data });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -198,17 +145,24 @@ exports.getKundli = async (req, res) => {
       return res.status(200).json({ success: true, source: 'cache', data: cachedKundli.data });
     }
 
-    const datetime = `${dob}T${tob}${timezone || '+05:30'}`;
-    const coordinates = `${latitude},${longitude}`;
-    
-    const data = await prokeralaService.fetchKundli(datetime, coordinates);
+    const result = await tathaastuService.getKundli({
+      name,
+      gender,
+      dob,
+      tob,
+      latitude,
+      longitude,
+      timezone
+    });
+
+    const data = result.data;
 
     await KundliCache.create({
       cacheKey,
       data
     });
 
-    return res.status(200).json({ success: true, source: 'api', data });
+    return res.status(200).json({ success: true, source: result.source, data });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

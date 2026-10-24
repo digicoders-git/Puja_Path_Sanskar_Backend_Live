@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 /**
  * Horoscope Model
- * Used to cache daily horoscopes from Prokerala API for 24 hours.
+ * Used to cache daily horoscopes from TathaAstu Vedic API for 24 hours.
  */
 const horoscopeSchema = new mongoose.Schema({
   sign: {

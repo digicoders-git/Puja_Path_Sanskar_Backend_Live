@@ -141,7 +141,7 @@ const collection = {
       ]
     },
     {
-      name: '5. Astrology / Prokerala',
+      name: '5. Astrology / TathaAstu Vedic',
       item: [
         {
           name: 'Daily Horoscope',
