@@ -6,6 +6,7 @@ const HoroscopeCache = require('../models/HoroscopeCache2');
 
 const TATHAASTU_API_KEY = process.env.TATHAASTU_API_KEY;
 const TATHAASTU_BASE_URL = process.env.TATHAASTU_BASE_URL || 'https://api.tathaastuapi.com/v1';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // In-memory cache for today's live panchang & timings
 let cachedPanchangDate = null;
@@ -514,6 +515,102 @@ function deriveVedicHoroscopeForSign(signKey, panchangData) {
 const memoryHoroscopeCache = new Map();
 
 /**
+ * Generate authentic, dynamic Vedic Daily Horoscope using Google Gemini AI
+ * Powered by live TathaAstu Panchang data (date, vara, tithi, nakshatra, yoga, muhurat)
+ */
+async function generateHoroscopeWithGemini(signKey, panchangData) {
+  if (!GEMINI_API_KEY) return null;
+
+  const p = panchangData.panchang || {};
+  const t = panchangData.timings || {};
+  const meta = rashiMeta[signKey] || { hindi: signKey, lord: 'स्वामी', luckyNums: [7, 3, 9], color: 'पीला' };
+  const varaName = p.vara?.name_local || 'आज';
+  const tithiName = p.tithi?.name_local ? `${p.tithi.paksha_local || ''} ${p.tithi.name_local}`.trim() : 'शुभ तिथि';
+  const nakshatraName = p.nakshatra?.name_local || 'शुभ नक्षत्र';
+  const yogaName = p.yoga?.name_local || 'शुभ योग';
+  const festivalName = (p.festivals?.items && p.festivals.items[0]?.name_local) || '';
+
+  let luckyTime = '11:45 AM - 12:35 PM (अभिजीत मुहूर्त)';
+  if (t.auspicious?.abhijit_muhurat?.start && t.auspicious?.abhijit_muhurat?.end) {
+    luckyTime = `${t.auspicious.abhijit_muhurat.start} - ${t.auspicious.abhijit_muhurat.end} (अभिजीत मुहूर्त)`;
+  }
+
+  const prompt = `आप एक प्रकांड एवं आदरणीय वैदिक ज्योतिषाचार्य हैं। आज की प्रामाणिक पंचांग गणना:
+- दिनांक: ${panchangData.date || new Date().toISOString().split('T')[0]}
+- वार: ${varaName}
+- तिथि: ${tithiName}
+- नक्षत्र: ${nakshatraName}
+- योग: ${yogaName}
+${festivalName ? `- आज का विशेष पर्व: ${festivalName}\n` : ''}- राशि: ${meta.hindi} (${signKey}), राशि स्वामी: ${meta.lord} ग्रह
+
+कृपया वैदिक ज्योतिष के नियमों के अनुसार ${meta.hindi} राशि के जातक के लिए आज का 100% सटीक, सकारात्मक एवं यथार्थवादी दैनिक राशिफल तैयार करें।
+उत्तर केवल और केवल नीचे दिए गए वैध JSON प्रारूप में दें (कोई अन्य टेक्स्ट या मार्कडाउन मत लिखें):
+{
+  "overall": "आज का संपूर्ण राशिफल (2-3 वाक्य हिंदी में, जिसमें आज के दिन/नक्षत्र का प्रभाव व मार्गदर्शन हो)",
+  "career": "करियर, नौकरी व व्यापार का फल (1-2 वाक्य हिंदी में)",
+  "love": "प्रेम संबंध व पारिवारिक/दांपत्य जीवन का फल (1-2 वाक्य हिंदी में)",
+  "health": "स्वास्थ्य का हाल व जरूरी सावधानी (1 वाक्य हिंदी में)",
+  "finance": "धन, आय व आर्थिक स्थिति का फल (1 वाक्य हिंदी में)",
+  "lucky_number": "${meta.luckyNums[0] || '7'}",
+  "lucky_color": "${meta.color || 'पीला'}",
+  "lucky_time": "${luckyTime}",
+  "remedy": "आज का अचूक वैदिक उपाय या मंत्र जप (1 वाक्य हिंदी में)",
+  "mood": "प्रसन्न एवं आशावादी",
+  "compatibility": "कर्क, वृश्चिक, मीन"
+}`;
+
+  const models = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      const res = await axios.post(
+        url,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 800
+          }
+        },
+        { timeout: 12000 }
+      );
+
+      const candidateText = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (candidateText) {
+        const jsonMatch = candidateText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            overall: parsed.overall || '',
+            career: parsed.career || '',
+            love: parsed.love || '',
+            health: parsed.health || '',
+            finance: parsed.finance || '',
+            lucky_number: (parsed.lucky_number || meta.luckyNums[0] || '7').toString(),
+            lucky_color: parsed.lucky_color || meta.color || 'पीला',
+            lucky_time: parsed.lucky_time || luckyTime,
+            remedy: parsed.remedy || 'भगवान सूर्य की आराधना करें।',
+            mood: parsed.mood || 'उत्साही एवं सकारात्मक (Positive)',
+            compatibility: parsed.compatibility || 'कर्क, वृश्चिक, मीन',
+            isAi: true,
+            panchang_summary: {
+              date: panchangData.date,
+              vara: varaName,
+              tithi: tithiName,
+              nakshatra: nakshatraName,
+              yoga: yogaName
+            }
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`Gemini model ${model} attempt error:`, err.message);
+    }
+  }
+  return null;
+}
+
+/**
  * Main function: Get Daily Horoscope for a zodiac sign
  */
 async function getDailyHoroscope(sign) {
@@ -523,7 +620,11 @@ async function getDailyHoroscope(sign) {
   const memKey = `${signKey}_${today}`;
 
   if (memoryHoroscopeCache.has(memKey)) {
-    return { success: true, source: 'memory-cache', data: memoryHoroscopeCache.get(memKey) };
+    const memData = memoryHoroscopeCache.get(memKey);
+    // If it's already an AI or API prediction (not old static fallback), return it
+    if (memData && memData.isAi) {
+      return { success: true, source: 'memory-cache', data: memData };
+    }
   }
 
   // 1. Check DB Cache if connected
@@ -531,7 +632,7 @@ async function getDailyHoroscope(sign) {
   if (mongoose.connection && mongoose.connection.readyState === 1) {
     try {
       const cached = await HoroscopeCache.findOne({ sign: signKey, type: 'daily', date: today });
-      if (cached && cached.data) {
+      if (cached && cached.data && cached.data.isAi) {
         memoryHoroscopeCache.set(memKey, cached.data);
         return { success: true, source: 'cache', data: cached.data };
       }
@@ -561,7 +662,8 @@ async function getDailyHoroscope(sign) {
         lucky_time: '11:45 AM - 12:35 PM',
         remedy: res.data.remedy_local || 'गाय को रोटी खिलाएं।',
         mood: 'प्रसन्न',
-        compatibility: 'कर्क, मीन'
+        compatibility: 'कर्क, मीन',
+        isAi: true
       };
 
       memoryHoroscopeCache.set(memKey, data);
@@ -582,7 +684,31 @@ async function getDailyHoroscope(sign) {
     // If Pro plan is required or endpoint unavailable, gracefully fall through
   }
 
-  // 4. Derive live prediction using TathaAstu's live Panchang for today
+  // 4. Try Google Gemini AI with Live TathaAstu Panchang
+  try {
+    const geminiData = await generateHoroscopeWithGemini(signKey, panchangData);
+    if (geminiData) {
+      memoryHoroscopeCache.set(memKey, geminiData);
+
+      if (mongoose.connection && mongoose.connection.readyState === 1) {
+        try {
+          await HoroscopeCache.findOneAndUpdate(
+            { sign: signKey, type: 'daily', date: today },
+            { sign: signKey, type: 'daily', date: today, data: geminiData },
+            { upsert: true, returnDocument: 'after' }
+          );
+        } catch (err) {
+          console.error('Error saving Gemini horoscope cache:', err.message);
+        }
+      }
+
+      return { success: true, source: 'gemini-vedic-ai', data: geminiData };
+    }
+  } catch (err) {
+    console.warn('Gemini horoscope generation fallback:', err.message);
+  }
+
+  // 5. Fallback: Derive prediction using TathaAstu live Panchang rules
   const derivedData = deriveVedicHoroscopeForSign(signKey, panchangData);
   memoryHoroscopeCache.set(memKey, derivedData);
 
