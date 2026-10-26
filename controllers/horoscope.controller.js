@@ -180,3 +180,25 @@ exports.getTodayAll = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch horoscopes' });
   }
 };
+
+/**
+ * Get Panchang for date
+ * GET /api/horoscope/panchang?date=YYYY-MM-DD
+ */
+exports.getPanchang = async (req, res) => {
+  try {
+    const { date, latitude, longitude, lat, lon } = req.query;
+    const finalLat = latitude || lat || 28.6139;
+    const finalLon = longitude || lon || 77.2090;
+
+    const panchangData = await tathaastuService.getPanchangForDate(date, finalLat, finalLon);
+    return res.status(200).json({
+      success: true,
+      message: 'Panchang fetched successfully',
+      data: panchangData
+    });
+  } catch (error) {
+    console.error('Horoscope getPanchang Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch panchang' });
+  }
+};

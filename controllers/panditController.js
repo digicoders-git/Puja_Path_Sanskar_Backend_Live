@@ -172,6 +172,14 @@ const getAllPandits = async (req, res) => {
 const getActivePandits = async (req, res) => {
   try {
     let query = { isActive: true };
+    if (req.query.city && req.query.city.trim()) {
+      const c = req.query.city.trim();
+      query.$or = [
+        { city: new RegExp(c, "i") },
+        { location: new RegExp(c, "i") },
+        { state: new RegExp(c, "i") }
+      ];
+    }
     if (req.query.pujaId) {
       const mongoose = require('mongoose');
       const pId = mongoose.isValidObjectId(req.query.pujaId) ? new mongoose.Types.ObjectId(req.query.pujaId) : req.query.pujaId;
@@ -193,8 +201,15 @@ const searchPandits = async (req, res) => {
   try {
     const { city, specialization, pujaId } = req.query;
     let query = { isActive: true };
-    if (city) query.city = new RegExp(city, "i");
-    if (specialization) query.specializations = { $in: [new RegExp(specialization, "i")] };
+    if (city && city.trim()) {
+      const c = city.trim();
+      query.$or = [
+        { city: new RegExp(c, "i") },
+        { location: new RegExp(c, "i") },
+        { state: new RegExp(c, "i") }
+      ];
+    }
+    if (specialization && specialization.trim()) query.specializations = { $in: [new RegExp(specialization.trim(), "i")] };
     if (pujaId) {
       const mongoose = require('mongoose');
       const pId = mongoose.isValidObjectId(pujaId) ? new mongoose.Types.ObjectId(pujaId) : pujaId;
@@ -278,6 +293,12 @@ const getNearbyPandits = async (req, res) => {
     const maxRadius = req.query.radius ? parseFloat(req.query.radius) : 100; // default 100km
 
     let query = { isActive: true };
+    if (req.query.pujaId) {
+      const mongoose = require('mongoose');
+      const pId = mongoose.isValidObjectId(req.query.pujaId) ? new mongoose.Types.ObjectId(req.query.pujaId) : req.query.pujaId;
+      query.selectedPujas = { $elemMatch: { puja: pId } };
+    }
+
     const pandits = await Pandit.find(query)
       .populate("selectedPujas.puja")
       .populate("reviews.user", "name profileImage");
@@ -310,20 +331,30 @@ const getNearbyPandits = async (req, res) => {
       return data;
     });
 
-    // If coordinates were provided, sort by distance
+    // If city is specified, filter by city
     let result = formatted;
+    if (city) {
+      const cLower = city.toLowerCase().trim();
+      const cityFiltered = formatted.filter(p => {
+        const pCity = (p.city || "").toLowerCase().trim();
+        const pState = (p.state || "").toLowerCase().trim();
+        const pLoc = (p.location || "").toLowerCase().trim();
+        return pCity.includes(cLower) || cLower.includes(pCity) || pLoc.includes(cLower) || (cLower.length > 3 && pState.includes(cLower));
+      });
+      if (cityFiltered.length > 0) {
+        result = cityFiltered;
+      }
+    }
+
+    // If coordinates were provided, sort by distance
     if (lat !== null && lng !== null) {
-      result = formatted
+      result = result
         .filter(p => p.distanceKm === null || p.distanceKm <= maxRadius)
         .sort((a, b) => {
           if (a.distanceKm === null) return 1;
           if (b.distanceKm === null) return -1;
           return a.distanceKm - b.distanceKm;
         });
-    } else if (city) {
-      // Filter by city if no coordinates provided
-      const cLower = city.toLowerCase();
-      result = formatted.filter(p => (p.city || "").toLowerCase().includes(cLower));
     }
 
     res.json({ success: true, count: result.length, pandits: result });

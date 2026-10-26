@@ -9,5 +9,6 @@ router.get('/love/:sign', horoscopeController.getLove);
 router.get('/career/:sign', horoscopeController.getCareer);
 router.get('/health/:sign', horoscopeController.getHealth);
 router.get('/compatibility', horoscopeController.getCompatibility);
+router.get('/panchang', horoscopeController.getPanchang);
 
 module.exports = router;

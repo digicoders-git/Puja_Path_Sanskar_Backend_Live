@@ -9,9 +9,9 @@ const findRashiValidation = [
 ];
 
 const panchangValidation = [
-  query('date').notEmpty().withMessage('Date is required (YYYY-MM-DD)'),
-  query('latitude').isNumeric().withMessage('Latitude must be numeric'),
-  query('longitude').isNumeric().withMessage('Longitude must be numeric')
+  query('date').optional().matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Date must be in YYYY-MM-DD format'),
+  query('latitude').optional().isNumeric().withMessage('Latitude must be numeric'),
+  query('longitude').optional().isNumeric().withMessage('Longitude must be numeric')
 ];
 
 const kundliValidation = [

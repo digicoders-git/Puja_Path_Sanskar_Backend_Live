@@ -43,45 +43,61 @@ const hindiToEnglishRashi = {
 };
 
 /**
- * Fetch Today's live Panchang from TathaAstu API
+ * Fetch Panchang for any given date from TathaAstu API
  */
-async function getLivePanchangToday() {
+async function getPanchangForDate(targetDate, lat = 28.6139, lon = 77.2090) {
+  const dateStr = targetDate || new Date().toISOString().split('T')[0];
   const today = new Date().toISOString().split('T')[0];
-  if (cachedPanchangData && cachedPanchangDate === today) {
+
+  if (dateStr === today && cachedPanchangData && cachedPanchangDate === today) {
     return cachedPanchangData;
   }
 
   try {
     const headers = { 'X-API-Key': TATHAASTU_API_KEY };
-    const panchangRes = await axios.get(`${TATHAASTU_BASE_URL}/today?lang=hi`, { headers, timeout: 8000 });
+    const panchangUrl = (dateStr === today)
+      ? `${TATHAASTU_BASE_URL}/today?lang=hi`
+      : `${TATHAASTU_BASE_URL}/panchang?date=${dateStr}&lat=${lat}&lon=${lon}&lang=hi`;
+
+    const panchangRes = await axios.get(panchangUrl, { headers, timeout: 8000 });
     let timingsRes = null;
     try {
-      timingsRes = await axios.get(`${TATHAASTU_BASE_URL}/timings?date=${today}&lat=28.6139&lon=77.2090`, { headers, timeout: 8000 });
+      timingsRes = await axios.get(`${TATHAASTU_BASE_URL}/timings?date=${dateStr}&lat=${lat}&lon=${lon}`, { headers, timeout: 8000 });
     } catch (_) {}
 
     const data = {
-      date: today,
+      date: dateStr,
       panchang: panchangRes.data,
       timings: timingsRes?.data || null
     };
 
-    cachedPanchangDate = today;
-    cachedPanchangData = data;
+    if (dateStr === today) {
+      cachedPanchangDate = today;
+      cachedPanchangData = data;
+    }
     return data;
   } catch (err) {
-    console.error('TathaAstu getLivePanchangToday Error:', err.response?.data || err.message);
-    // If API is down or throttled, return fallback structure
+    console.error(`TathaAstu getPanchangForDate (${dateStr}) Error:`, err.response?.data || err.message);
     return {
-      date: today,
+      date: dateStr,
       panchang: {
-        vara: { name_local: 'आज' },
-        tithi: { full_name_local: 'शुभ तिथि' },
+        date: dateStr,
+        vara: { name_local: 'शुभ वार' },
+        tithi: { full_name_local: 'शुभ तिथि', name_local: 'तिथि' },
         nakshatra: { name_local: 'शुभ नक्षत्र' },
         yoga: { name_local: 'शुभ योग' }
       },
       timings: null
     };
   }
+}
+
+/**
+ * Fetch Today's live Panchang from TathaAstu API
+ */
+async function getLivePanchangToday() {
+  const today = new Date().toISOString().split('T')[0];
+  return getPanchangForDate(today);
 }
 
 /**
@@ -1022,6 +1038,7 @@ async function getKundli({ name, gender, dob, tob, latitude, longitude, timezone
 
 module.exports = {
   getLivePanchangToday,
+  getPanchangForDate,
   getDailyHoroscope,
   getWeeklyHoroscope,
   getMonthlyHoroscope,

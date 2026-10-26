@@ -115,7 +115,11 @@ exports.getDailyTarot = async (req, res) => {
  */
 exports.getPanchang = async (req, res) => {
   try {
-    const panchangData = await tathaastuService.getLivePanchangToday();
+    const { date, latitude, longitude, lat, lon } = req.query;
+    const finalLat = latitude || lat || 28.6139;
+    const finalLon = longitude || lon || 77.2090;
+
+    const panchangData = await tathaastuService.getPanchangForDate(date, finalLat, finalLon);
     return res.status(200).json({
       success: true,
       source: 'tathaastu-api',
