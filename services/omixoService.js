@@ -1,12 +1,13 @@
 const axios = require("axios");
 
 /**
- * Clean phone number to 10-digit Indian standard
+ * Clean and format phone number to 12-digit Indian standard (with 91 prefix required by Omixo PRI/SIP trunk)
  */
 function cleanIndianNumber(phone) {
   if (!phone) return "";
   const digits = phone.toString().replace(/\D/g, "");
-  return digits.length > 10 ? digits.slice(-10) : digits;
+  const last10 = digits.length >= 10 ? digits.slice(-10) : digits;
+  return `91${last10}`;
 }
 
 /**
