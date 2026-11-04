@@ -3,8 +3,9 @@ const User = require("../models/User");
 const Pandit = require("../models/Pandit");
 const CallLog = require("../models/CallLog");
 const twilioService = require("../services/twilioService");
+const omixoService = require("../services/omixoService");
 
-// 1. Initiate Masked Call (User App -> Backend -> Twilio Bridge)
+// 1. Initiate Masked Call (User App -> Backend -> Omixo / Twilio Bridge)
 const initiateMaskedCall = async (req, res) => {
   try {
     const { bookingId, userPhoneOverride } = req.body;
@@ -17,12 +18,15 @@ const initiateMaskedCall = async (req, res) => {
       });
     }
 
-    // Check Twilio Configuration
-    if (!twilioService.isConfigured()) {
+    // Check Calling Providers Configuration (Omixo preferred, Twilio as fallback)
+    const hasOmixo = omixoService.isConfigured();
+    const hasTwilio = twilioService.isConfigured();
+
+    if (!hasOmixo && !hasTwilio) {
       return res.status(503).json({
         success: false,
         isConfigured: false,
-        message: "Twilio Call Masking सेवा सक्रिय नहीं है। कृपया .env में TWILIO_AUTH_TOKEN कॉन्फ़िगर करें।",
+        message: "Call Masking सेवा सक्रिय नहीं है। कृपया .env में OMIXO_API_KEY या TWILIO_AUTH_TOKEN कॉन्फ़िगर करें।",
       });
     }
 
@@ -82,28 +86,37 @@ const initiateMaskedCall = async (req, res) => {
       });
     }
 
-    // Public Base URL so Twilio's cloud servers can fetch the TwiML instructions
-    const baseUrl =
-      process.env.BASE_URL && !process.env.BASE_URL.includes("localhost")
-        ? process.env.BASE_URL
-        : "https://api.pujapathsanskar.com";
+    let result;
+    if (hasOmixo) {
+      // Use Omixo Click-to-Call (User phone rings first, then bridges to Pandit)
+      result = await omixoService.initiateClickToCall({
+        userPhone,
+        panditPhone,
+      });
+    } else {
+      // Public Base URL so Twilio's cloud servers can fetch the TwiML instructions
+      const baseUrl =
+        process.env.BASE_URL && !process.env.BASE_URL.includes("localhost")
+          ? process.env.BASE_URL
+          : "https://api.pujapathsanskar.com";
 
-    const twimlUrl = `${baseUrl}/api/calls/bridge-twiml/${booking._id}`;
+      const twimlUrl = `${baseUrl}/api/calls/bridge-twiml/${booking._id}`;
 
-    let statusCallbackUrl = undefined;
-    if (baseUrl && !baseUrl.includes("localhost")) {
-      statusCallbackUrl = `${baseUrl}/api/calls/status-callback`;
+      let statusCallbackUrl = undefined;
+      if (baseUrl && !baseUrl.includes("localhost")) {
+        statusCallbackUrl = `${baseUrl}/api/calls/status-callback`;
+      }
+
+      // Call Twilio Service to bridge User and Pandit via URL
+      result = await twilioService.initiateMaskedCall({
+        userPhone,
+        panditPhone,
+        userName: booking.user.name || "भक्त जन",
+        panditName: booking.pandit.fullName || "पंडित जी",
+        twimlUrl,
+        statusCallbackUrl,
+      });
     }
-
-    // Call Twilio Service to bridge User and Pandit via URL
-    const result = await twilioService.initiateMaskedCall({
-      userPhone,
-      panditPhone,
-      userName: booking.user.name || "भक्त जन",
-      panditName: booking.pandit.fullName || "पंडित जी",
-      twimlUrl,
-      statusCallbackUrl,
-    });
 
     // Save call log for audit and masking verification
     await CallLog.create({

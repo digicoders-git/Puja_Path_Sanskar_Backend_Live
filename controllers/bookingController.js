@@ -99,7 +99,10 @@ const getUserBookings = async (req, res) => {
       .sort({ createdAt: -1 });
 
     // Mask Pandit phone numbers for user privacy and security
-    const virtualPhone = process.env.TWILIO_PHONE_NUMBER || "+17372508034";
+    const virtualPhone =
+      process.env.OMIXO_CALLER_ID ||
+      process.env.TWILIO_PHONE_NUMBER ||
+      "+91915226523606";
     const bookings = rawBookings.map((b) => {
       const bObj = b.toObject();
       if (bObj.pandit) {
