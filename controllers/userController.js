@@ -191,6 +191,7 @@ const googleLogin = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      mobile: user.mobile || "",
       profileImage: user.profileImage,
       token: generateToken(user._id),
     });
@@ -231,9 +232,16 @@ const updateMyProfile = async (req, res) => {
       user.profileImage = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
     }
 
-    if (mobile !== undefined) {
+    if (mobile !== undefined && mobile !== "") {
       if (!/^[0-9]{10}$/.test(mobile)) {
         return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye", success: false });
+      }
+      const existingUser = await User.findOne({ mobile, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(400).json({
+          message: "यह मोबाइल नंबर पहले से किसी अन्य खाते में दर्ज है। कृपया दूसरा नंबर दर्ज करें।",
+          success: false,
+        });
       }
       user.mobile = mobile;
     }
