@@ -27,7 +27,8 @@ const initiateMaskedCall = async (req, res) => {
     }
 
     const booking = await Booking.findById(bookingId)
-      .populate("pandit", "fullName mobileNumber")
+      .populate("pandit", "fullName mobileNumber astrology")
+      .populate("puja", "name pujaType")
       .populate("user", "name mobile");
 
     if (!booking) {
@@ -42,6 +43,18 @@ const initiateMaskedCall = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "आपको इस बुकिंग के लिए कॉल करने की अनुमति नहीं है।",
+      });
+    }
+
+    // For Astrology, bypass call masking and provide direct fixed contact number
+    const isAstrology = (booking.puja && (booking.puja.pujaType?.toLowerCase().includes("astro") || booking.puja.name?.toLowerCase().includes("astro"))) ||
+                        (booking.pandit && booking.pandit.astrology);
+    if (isAstrology) {
+      return res.status(200).json({
+        success: true,
+        directCall: true,
+        directPhone: "8433344459",
+        message: "ज्योतिषी परामर्श हेतु सीधे +91 8433344459 पर संपर्क करें।",
       });
     }
 
