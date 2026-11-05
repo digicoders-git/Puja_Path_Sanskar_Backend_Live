@@ -342,10 +342,17 @@ const verifyConsultationPayment = async (req, res) => {
       })
       .catch(console.error);
 
+    // Fetch astrologer phone
+    const Astrologer = require("../models/Astrologer");
+    const astro = await Astrologer.findById(notes.astrologerId);
+    const astrologerPhone = astro ? (astro.phone || astro.mobile || "") : "";
+
     res.status(201).json({
       success: true,
       message: "Consultation payment verified and booked successfully!",
       booking,
+      astrologerPhone,
+      astrologer: astro,
     });
   } catch (error) {
     res.status(500).json({ message: error.message, success: false });

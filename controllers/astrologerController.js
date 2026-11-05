@@ -36,6 +36,8 @@ exports.createAstrologer = async (req, res) => {
     if (data.image) {
       data.image = processBase64Image(data.image, req);
     }
+    if (data.phone && !data.mobile) data.mobile = data.phone;
+    if (data.mobile && !data.phone) data.phone = data.mobile;
     const astrologer = new Astrologer(data);
     await astrologer.save();
     res.status(201).json({ success: true, message: "Astrologer created successfully", astrologer: formatAstrologerMedia(astrologer, req) });
@@ -79,6 +81,8 @@ exports.updateAstrologer = async (req, res) => {
     if (data.image) {
       data.image = processBase64Image(data.image, req);
     }
+    if (data.phone !== undefined && !data.mobile) data.mobile = data.phone;
+    if (data.mobile !== undefined && !data.phone) data.phone = data.mobile;
     const astrologer = await Astrologer.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!astrologer) return res.status(404).json({ success: false, message: "Astrologer not found" });
     res.status(200).json({ success: true, message: "Astrologer updated", astrologer: formatAstrologerMedia(astrologer, req) });

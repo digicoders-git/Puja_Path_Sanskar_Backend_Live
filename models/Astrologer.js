@@ -59,6 +59,14 @@ const astrologerSchema = new mongoose.Schema(
     location: {
       type: String,
     },
+    phone: {
+      type: String,
+      default: "",
+    },
+    mobile: {
+      type: String,
+      default: "",
+    },
     isVerified: {
       type: Boolean,
       default: false,
