@@ -255,11 +255,22 @@ const updateMyProfile = async (req, res) => {
       const existingUser = await User.findOne({ mobile: cleanMobile, _id: { $ne: user._id } });
 
       if (existingUser) {
-        // DYNAMIC ACCOUNT MERGE & LINKING:
-        // The user verified via Google/token and wants to link this mobile number.
-        // Merge the Google login / new details into existingUser
+        const currentEmail = (user.email || "").trim().toLowerCase();
+        const existingEmail = (existingUser.email || "").trim().toLowerCase();
+
+        // Agar DIFFERENT Gmail hai aur mobile number same hai, to error aana chahiye:
+        const isSameGmail = (currentEmail && existingEmail && currentEmail === existingEmail) ||
+                            (user.googleId && existingUser.googleId && user.googleId === existingUser.googleId);
+
+        if (!isSameGmail) {
+          return res.status(400).json({
+            message: "यह मोबाइल नंबर पहले से किसी अन्य खाते में दर्ज है। कृपया दूसरा नंबर दर्ज करें।",
+            success: false,
+          });
+        }
+
+        // Agar SAME Gmail hai, to smoothly link/merge karke login karao:
         const currentGoogleId = user.googleId;
-        const currentEmail = user.email;
         const currentProfileImage = user.profileImage;
         const currentFcmToken = user.fcmToken;
         const currentName = user.name;
