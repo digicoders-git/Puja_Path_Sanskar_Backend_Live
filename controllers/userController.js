@@ -142,47 +142,59 @@ const googleLogin = async (req, res) => {
     }
 
     const googleId = payload.sub || payload.user_id;
-    const email = payload.email;
+    const rawEmail = payload.email || "";
+    const email = rawEmail.trim().toLowerCase();
     const name = payload.name || payload.given_name || "User";
     const picture = payload.picture || "";
 
     // Check if user already exists
+    // 1. Check by googleId
     let user = await User.findOne({ googleId });
     let isNewUser = false;
 
-    if (!user) {
-      user = await User.findOne({ email });
+    // 2. If not found by googleId, check by case-insensitive email
+    if (!user && email) {
+      user = await User.findOne({
+        email: { $regex: new RegExp("^" + email + "$", "i") }
+      });
       if (user) {
         user.googleId = googleId;
-        user.name = user.name || name;
-        user.profileImage = user.profileImage || picture;
+        if (!user.name || user.name === "User") user.name = name;
+        if (!user.profileImage || user.profileImage.includes("default")) {
+          user.profileImage = picture;
+        }
         if (fcmToken) user.fcmToken = fcmToken;
         await user.save();
-      } else {
-        let calculatedRashi = 'Leo';
-        if (name) {
-          if (name.toLowerCase().startsWith('a') || name.toLowerCase().startsWith('l')) calculatedRashi = 'Aries';
-          else if (name.toLowerCase().startsWith('t') || name.toLowerCase().startsWith('v')) calculatedRashi = 'Taurus';
-          else if (name.toLowerCase().startsWith('m')) calculatedRashi = 'Leo';
-        }
-
-        user = await User.create({
-          googleId,
-          email,
-          name,
-          profileImage: picture,
-          isActive: true,
-          rashi: calculatedRashi,
-          fcmToken: fcmToken || ""
-        });
-        isNewUser = true;
       }
+    }
+
+    if (!user) {
+      let calculatedRashi = 'Leo';
+      if (name) {
+        if (name.toLowerCase().startsWith('a') || name.toLowerCase().startsWith('l')) calculatedRashi = 'Aries';
+        else if (name.toLowerCase().startsWith('t') || name.toLowerCase().startsWith('v')) calculatedRashi = 'Taurus';
+        else if (name.toLowerCase().startsWith('m')) calculatedRashi = 'Leo';
+      }
+
+      user = await User.create({
+        googleId,
+        email,
+        name,
+        profileImage: picture,
+        isActive: true,
+        rashi: calculatedRashi,
+        fcmToken: fcmToken || ""
+      });
+      isNewUser = true;
     } else {
-      // User exists by googleId, update fcmToken
+      // User exists, update fcmToken and photo if needed
       if (fcmToken) {
         user.fcmToken = fcmToken;
-        await user.save();
       }
+      if (!user.profileImage && picture) {
+        user.profileImage = picture;
+      }
+      await user.save();
     }
 
     res.status(200).json({
@@ -194,6 +206,7 @@ const googleLogin = async (req, res) => {
       mobile: user.mobile || "",
       profileImage: user.profileImage,
       token: generateToken(user._id),
+      user: user,
     });
 
   } catch (error) {
@@ -233,17 +246,77 @@ const updateMyProfile = async (req, res) => {
     }
 
     if (mobile !== undefined && mobile !== "") {
-      if (!/^[0-9]{10}$/.test(mobile)) {
+      const cleanMobile = mobile.toString().trim();
+      if (!/^[0-9]{10}$/.test(cleanMobile)) {
         return res.status(400).json({ message: "Mobile number 10 digits ka hona chahiye", success: false });
       }
-      const existingUser = await User.findOne({ mobile, _id: { $ne: user._id } });
+
+      // Check if another account already exists with this mobile number
+      const existingUser = await User.findOne({ mobile: cleanMobile, _id: { $ne: user._id } });
+
       if (existingUser) {
-        return res.status(400).json({
-          message: "यह मोबाइल नंबर पहले से किसी अन्य खाते में दर्ज है। कृपया दूसरा नंबर दर्ज करें।",
-          success: false,
+        // DYNAMIC ACCOUNT MERGE & LINKING:
+        // The user verified via Google/token and wants to link this mobile number.
+        // Merge the Google login / new details into existingUser
+        const currentGoogleId = user.googleId;
+        const currentEmail = user.email;
+        const currentProfileImage = user.profileImage;
+        const currentFcmToken = user.fcmToken;
+        const currentName = user.name;
+
+        // 1. Migrate any bookings, addresses, consultations from user._id to existingUser._id
+        try {
+          const Booking = require("../models/Booking");
+          await Booking.updateMany({ user: user._id }, { user: existingUser._id });
+        } catch (e) {
+          console.warn("Booking migration notice:", e.message);
+        }
+
+        try {
+          const Address = require("../models/Address");
+          await Address.updateMany({ user: user._id }, { user: existingUser._id });
+        } catch (e) {
+          console.warn("Address migration notice:", e.message);
+        }
+
+        try {
+          const ConsultationBooking = require("../models/ConsultationBooking");
+          await ConsultationBooking.updateMany({ user: user._id }, { user: existingUser._id });
+        } catch (e) {
+          console.warn("ConsultationBooking migration notice:", e.message);
+        }
+
+        // 2. Delete temporary orphan user to release unique googleId index
+        if (user._id.toString() !== existingUser._id.toString()) {
+          await User.findByIdAndDelete(user._id);
+        }
+
+        // 3. Update existingUser with Google credentials & latest profile info
+        if (currentGoogleId) existingUser.googleId = currentGoogleId;
+        if (currentEmail && (!existingUser.email || existingUser.email === "")) existingUser.email = currentEmail;
+        if (currentProfileImage && (!existingUser.profileImage || existingUser.profileImage === "" || existingUser.profileImage.includes("default"))) {
+          existingUser.profileImage = currentProfileImage;
+        }
+        if (currentFcmToken) existingUser.fcmToken = currentFcmToken;
+        if (name !== undefined && name.trim()) existingUser.name = name.trim();
+        else if (currentName && (!existingUser.name || existingUser.name === "User")) existingUser.name = currentName;
+        if (dateOfBirth !== undefined) existingUser.dateOfBirth = dateOfBirth;
+        if (gender !== undefined) existingUser.gender = gender;
+        if (rashi !== undefined) existingUser.rashi = rashi;
+
+        const savedUser = await existingUser.save();
+        const newToken = generateToken(savedUser._id);
+
+        return res.status(200).json({
+          success: true,
+          message: "खाता सफलतापूर्वक लिंक हो गया!",
+          user: savedUser,
+          token: newToken,
+          isMerged: true,
         });
       }
-      user.mobile = mobile;
+
+      user.mobile = cleanMobile;
     }
 
     const updatedUser = await user.save();
