@@ -5,6 +5,8 @@ const {
   handleInboundWebhook,
   handleStatusCallback,
   getBookingCallHistory,
+  initiateAstrologerMaskedCall,
+  getAstrologerBridgeTwiML,
 } = require("../controllers/callController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -22,6 +24,13 @@ router.post("/inbound-webhook", handleInboundWebhook);
 
 // Twilio Status Callback (Twilio updates call completion/duration)
 router.post("/status-callback", handleStatusCallback);
+
+// User initiates a secure masked call for an astrologer
+router.post("/astrologer/initiate", Auth, userOnly, initiateAstrologerMaskedCall);
+
+// Public Bridge TwiML for Astrologer (Twilio Cloud fetches this to bridge user and astrologer)
+router.get("/astrologer-bridge-twiml/:astrologerId", getAstrologerBridgeTwiML);
+router.post("/astrologer-bridge-twiml/:astrologerId", getAstrologerBridgeTwiML);
 
 // Call history for a booking
 router.get("/history/:bookingId", Auth, getBookingCallHistory);

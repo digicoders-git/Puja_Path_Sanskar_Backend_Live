@@ -50,18 +50,6 @@ const initiateMaskedCall = async (req, res) => {
       });
     }
 
-    // For Astrology, bypass call masking and provide direct fixed contact number
-    const isAstrology = (booking.puja && (booking.puja.pujaType?.toLowerCase().includes("astro") || booking.puja.name?.toLowerCase().includes("astro"))) ||
-                        (booking.pandit && booking.pandit.astrology);
-    if (isAstrology) {
-      return res.status(200).json({
-        success: true,
-        directCall: true,
-        directPhone: "8433344459",
-        message: "ज्योतिषी परामर्श हेतु सीधे +91 8433344459 पर संपर्क करें।",
-      });
-    }
-
     if (!booking.pandit) {
       return res.status(400).json({
         success: false,
@@ -278,10 +266,155 @@ const getBookingCallHistory = async (req, res) => {
   }
 };
 
+// 6. Initiate Astrologer Masked Call (User App -> Backend -> Omixo / Twilio Bridge)
+const initiateAstrologerMaskedCall = async (req, res) => {
+  try {
+    const { astrologerId, consultationId, userPhoneOverride } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (!astrologerId && !consultationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Astrologer ID या Consultation ID आवश्यक है।",
+      });
+    }
+
+    const hasOmixo = omixoService.isConfigured();
+    const hasTwilio = twilioService.isConfigured();
+
+    if (!hasOmixo && !hasTwilio) {
+      return res.status(503).json({
+        success: false,
+        isConfigured: false,
+        message: "Call Masking सेवा सक्रिय नहीं है। कृपया .env में OMIXO_API_KEY या TWILIO_AUTH_TOKEN कॉन्फ़िगर करें।",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "उपयोगकर्ता नहीं मिला।" });
+    }
+
+    const Astrologer = require("../models/Astrologer");
+    let astrologer = null;
+
+    if (astrologerId) {
+      astrologer = await Astrologer.findById(astrologerId);
+    } else if (consultationId) {
+      const ConsultationBooking = require("../models/ConsultationBooking");
+      const consultation = await ConsultationBooking.findById(consultationId).populate("astrologer");
+      if (consultation) astrologer = consultation.astrologer;
+    }
+
+    if (!astrologer) {
+      return res.status(404).json({ success: false, message: "ज्योतिषी नहीं मिले।" });
+    }
+
+    const astrologerPhone = (astrologer.phone || astrologer.mobile || "").toString().trim();
+    if (!astrologerPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "ज्योतिषी जी का संपर्क नंबर एडमिन पैनल में दर्ज नहीं है।",
+      });
+    }
+
+    const userPhone = userPhoneOverride || user.mobile;
+    if (!userPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "आपका मोबाइल नंबर उपलब्ध नहीं है। कृपया पहले प्रोफाइल में मोबाइल नंबर दर्ज करें।",
+      });
+    }
+
+    let result;
+    if (hasOmixo) {
+      // Omixo Click-to-Call: User phone rings first, then bridges to Astrologer
+      result = await omixoService.initiateClickToCall({
+        userPhone,
+        panditPhone: astrologerPhone,
+      });
+    } else {
+      const baseUrl =
+        process.env.BASE_URL && !process.env.BASE_URL.includes("localhost")
+          ? process.env.BASE_URL
+          : "https://api.pujapathsanskar.com";
+
+      const twimlUrl = `${baseUrl}/api/calls/astrologer-bridge-twiml/${astrologer._id}`;
+      result = await twilioService.initiateMaskedCall({
+        userPhone,
+        panditPhone: astrologerPhone,
+        userName: user.name || "भक्त जन",
+        panditName: astrologer.name || "ज्योतिषी जी",
+        twimlUrl,
+      });
+    }
+
+    // Save CallLog for audit
+    await CallLog.create({
+      user: user._id,
+      callSid: result.callSid,
+      fromVirtualNumber: result.from,
+      userPhoneMasked: result.userPhoneMasked,
+      panditPhoneMasked: result.panditPhoneMasked,
+      status: "initiated",
+      direction: "outbound-bridge",
+      initiatedBy: "user",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "सुरक्षित कॉल शुरू हो गई है! आपके फ़ोन पर इनकमिंग कॉल आ रही है, कृपया कॉल उठाएं।",
+      callSid: result.callSid,
+      virtualNumber: result.from,
+      panditPhoneMasked: result.panditPhoneMasked,
+      astrologerPhoneMasked: result.panditPhoneMasked,
+    });
+  } catch (error) {
+    console.error("Astrologer Masked Call Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "कॉल कनेक्ट करने में त्रुटि हुई।",
+    });
+  }
+};
+
+// 7. Astrologer Bridge TwiML (for Twilio fallback)
+const getAstrologerBridgeTwiML = async (req, res) => {
+  try {
+    const { astrologerId } = req.params;
+    const Astrologer = require("../models/Astrologer");
+    const astrologer = await Astrologer.findById(astrologerId);
+
+    if (!astrologer || (!astrologer.phone && !astrologer.mobile)) {
+      res.type("text/xml");
+      return res.send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN">ज्योतिषी जी का नंबर उपलब्ध नहीं है।</Say></Response>`
+      );
+    }
+
+    const xml = twilioService.generateBridgeTwiML({
+      userName: "भक्त जन",
+      panditName: astrologer.name || "ज्योतिषी जी",
+      panditPhone: astrologer.phone || astrologer.mobile,
+    });
+
+    res.type("text/xml");
+    return res.send(xml);
+  } catch (error) {
+    console.error("Astrologer Bridge TwiML Error:", error);
+    res.type("text/xml");
+    return res.send(
+      `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="hi-IN">तकनीकी त्रुटि हुई।</Say></Response>`
+    );
+  }
+};
+
 module.exports = {
   initiateMaskedCall,
   getBridgeTwiML,
   handleInboundWebhook,
   handleStatusCallback,
   getBookingCallHistory,
+  initiateAstrologerMaskedCall,
+  getAstrologerBridgeTwiML,
 };
