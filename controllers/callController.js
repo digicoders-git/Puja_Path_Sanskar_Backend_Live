@@ -58,7 +58,10 @@ const initiateMaskedCall = async (req, res) => {
     }
 
     const userPhone = userPhoneOverride || booking.user.mobile;
-    const panditPhone = booking.pandit.mobileNumber;
+    const panditPhone =
+      booking.pandit.phone ||
+      booking.pandit.mobileNumber ||
+      booking.pandit.mobile;
 
     if (!userPhone) {
       return res.status(400).json({
@@ -371,9 +374,21 @@ const initiateAstrologerMaskedCall = async (req, res) => {
     });
   } catch (error) {
     console.error("Astrologer Masked Call Error:", error);
+    let msg = error.message || "कॉल कनेक्ट करने में त्रुटि हुई।";
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("busy") ||
+      lower.includes("channel") ||
+      lower.includes("in use") ||
+      lower.includes("originate") ||
+      lower.includes("active")
+    ) {
+      msg =
+        "कॉल लाइन अभी व्यस्त है या पिछली कॉल अभी रिंग हो रही है। कृपया 15-20 सेकंड बाद पुनः प्रयास करें।";
+    }
     return res.status(500).json({
       success: false,
-      message: error.message || "कॉल कनेक्ट करने में त्रुटि हुई।",
+      message: msg,
     });
   }
 };
