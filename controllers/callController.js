@@ -606,7 +606,7 @@ const getUserAstrologyHistory = async (req, res) => {
             remainingSeconds: totalSecs,
             consumedSeconds: 0,
             status: "active",
-            planTitle: `${totalSecs ~/ 60} Min Consultation`,
+            planTitle: `${Math.floor(totalSecs / 60)} Min Consultation`,
             amount: b.amount || 0,
             expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
           });
