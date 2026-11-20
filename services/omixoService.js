@@ -66,13 +66,9 @@ async function initiateClickToCall({ userPhone, panditPhone, ttlMinutes, maxDura
     payload.caller_id = callerId.toString().replace(/\D/g, "");
   }
 
-  // Pass auto-cut time limit if provided
-  if (ttlMinutes) {
-    payload.ttl_minutes = Number(ttlMinutes);
-  }
-  if (maxDurationSeconds) {
-    payload.max_duration = Number(maxDurationSeconds);
-    payload.time_limit = Number(maxDurationSeconds);
+  // Pass max duration for talk time (ensure minimum 60s buffer so call does not prematurely drop)
+  if (maxDurationSeconds && maxDurationSeconds > 0) {
+    payload.max_duration = Math.max(60, Number(maxDurationSeconds));
   }
 
   try {

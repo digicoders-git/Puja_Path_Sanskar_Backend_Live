@@ -471,8 +471,10 @@ const handleOmixoWebhook = async (req, res) => {
     const duration = Number(eventData.duration) || 0;
     const talk_seconds_left = eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null;
     const caller = eventData.caller || "";
+    const disposition = (eventData.disposition || "").toUpperCase();
 
-    if (event === "call_completed" || event === "call.completed" || eventData.disposition) {
+    // Only process if call was completed/ended
+    if (event === "call_completed" || event === "call.completed" || disposition) {
       const AstrologyCallSession = require("../models/AstrologyCallSession");
 
       // Find by lastCallSid or session_id
@@ -500,21 +502,28 @@ const handleOmixoWebhook = async (req, res) => {
       }
 
       if (session) {
-        session.consumedSeconds = (session.consumedSeconds || 0) + duration;
+        // Only deduct if call was actually answered and talk duration > 5 seconds
+        // Prevent deduction if call was just ringing, busy, or dropped without connect
+        const wasAnswered = disposition === "ANSWERED" || duration > 5;
         
-        if (talk_seconds_left !== null && !isNaN(talk_seconds_left)) {
-          session.remainingSeconds = Math.max(0, talk_seconds_left);
+        if (wasAnswered) {
+          session.consumedSeconds = (session.consumedSeconds || 0) + duration;
+          
+          if (talk_seconds_left !== null && !isNaN(talk_seconds_left) && talk_seconds_left >= 0) {
+            session.remainingSeconds = talk_seconds_left;
+          } else {
+            session.remainingSeconds = Math.max(0, session.totalDurationSeconds - session.consumedSeconds);
+          }
+
+          if (session.remainingSeconds <= 15) {
+            session.status = "completed";
+            session.remainingSeconds = 0;
+          }
+          await session.save();
+          console.log(`Astrology Session Updated (Answered): ID=${session._id}, Consumed=${session.consumedSeconds}s, Remaining=${session.remainingSeconds}s, Status=${session.status}`);
         } else {
-          session.remainingSeconds = Math.max(0, session.totalDurationSeconds - session.consumedSeconds);
+          console.log(`Astrology Call NOT Answered/Too Short (Disposition=${disposition}, Duration=${duration}s). Balance NOT deducted. Remaining=${session.remainingSeconds}s`);
         }
-
-        if (session.remainingSeconds <= 15) {
-          session.status = "completed";
-          session.remainingSeconds = 0;
-        }
-
-        await session.save();
-        console.log(`Astrology Session Updated: ID=${session._id}, Consumed=${session.consumedSeconds}s, Remaining=${session.remainingSeconds}s, Status=${session.status}`);
       }
 
       // Update CallLog if present
