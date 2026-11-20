@@ -247,7 +247,7 @@ const verifyRemainingPayment = async (req, res) => {
 // Step 5: Consultation Payment Order Create
 const createConsultationPayment = async (req, res) => {
   try {
-    const { astrologerId, problemDescription, amount } = req.body;
+    const { astrologerId, problemDescription, amount, durationMinutes } = req.body;
 
     if (!astrologerId || !amount) {
       return res.status(400).json({ message: "astrologerId and amount required", success: false });
@@ -264,6 +264,7 @@ const createConsultationPayment = async (req, res) => {
         astrologerId: String(astrologerId),
         problemDescription: problemDescription || "Astrology Consultation",
         amount: numAmount,
+        durationMinutes: durationMinutes ? String(durationMinutes) : "",
         userId: String(req.user.id || req.user._id),
       },
     });
@@ -349,7 +350,28 @@ const verifyConsultationPayment = async (req, res) => {
 
     // Automatically create or activate an AstrologyCallSession so user immediately sees active session in Booking History & Detail Screen
     const AstrologyCallSession = require("../models/AstrologyCallSession");
-    const durationMinutes = Number(notes.durationMinutes) || (Number(notes.amount) >= 250 ? 15 : 10);
+
+    // Match exact durationMinutes from astrologer's plan in DB, or notes.durationMinutes, or problemDescription
+    let durationMinutes = Number(notes.durationMinutes);
+    if (!durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+      if (astro && astro.plans && Array.isArray(astro.plans)) {
+        const matchedPlan = astro.plans.find((p) => Number(p.price) === Number(notes.amount));
+        if (matchedPlan && matchedPlan.duration) {
+          durationMinutes = Number(matchedPlan.duration);
+        }
+      }
+    }
+    if (!durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+      // Try parsing from problemDescription (e.g. "2 मिनट - शुभ मुहूर्त - ₹151")
+      const descMatch = (notes.problemDescription || "").match(/(\d+)\s*(?:मिनट|min|mins|minute)/i);
+      if (descMatch && descMatch[1]) {
+        durationMinutes = Number(descMatch[1]);
+      }
+    }
+    if (!durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+      durationMinutes = Number(notes.amount) >= 250 ? 15 : 10;
+    }
+
     const totalSeconds = durationMinutes * 60;
 
     let activeCallSession = await AstrologyCallSession.findOne({

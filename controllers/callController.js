@@ -622,7 +622,20 @@ const getUserAstrologyHistory = async (req, res) => {
 
       for (const b of bookings) {
         if (b.astrologer && (b.astrologer._id || b.astrologer.name)) {
-          const totalSecs = (Number(b.amount) >= 250 ? 15 : 10) * 60;
+          let durationMinutes = 0;
+          if (b.astrologer.plans && Array.isArray(b.astrologer.plans)) {
+            const matchedPlan = b.astrologer.plans.find((p) => Number(p.price) === Number(b.amount));
+            if (matchedPlan && matchedPlan.duration) durationMinutes = Number(matchedPlan.duration);
+          }
+          if (!durationMinutes) {
+            const descMatch = (b.problemDescription || "").match(/(\d+)\s*(?:मिनट|min|mins|minute)/i);
+            if (descMatch && descMatch[1]) durationMinutes = Number(descMatch[1]);
+          }
+          if (!durationMinutes) {
+            durationMinutes = Number(b.amount) >= 250 ? 15 : 10;
+          }
+
+          const totalSecs = durationMinutes * 60;
           const newSession = await AstrologyCallSession.create({
             user: b.user,
             astrologer: b.astrologer._id,
