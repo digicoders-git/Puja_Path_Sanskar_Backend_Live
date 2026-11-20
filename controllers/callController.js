@@ -576,6 +576,7 @@ const getUserAstrologyHistory = async (req, res) => {
     const userId = req.user.id || req.user._id;
     const AstrologyCallSession = require("../models/AstrologyCallSession");
     const ConsultationBooking = require("../models/ConsultationBooking");
+    const User = require("../models/User");
 
     // Match userId as either ObjectId or string
     const matchUserQuery = mongoose.Types.ObjectId.isValid(userId)
@@ -619,13 +620,29 @@ const getUserAstrologyHistory = async (req, res) => {
       }
     }
 
-    // 3. Fetch all call logs for this user with astrologers
-    const callLogs = await CallLog.find({
+    // 3. Fetch all call logs for this user with astrologers (and fallback by user phone)
+    let callLogs = await CallLog.find({
       user: matchUserQuery,
       astrologer: { $exists: true, $ne: null },
     })
       .populate("astrologer", "name image specialty")
       .sort({ createdAt: -1 });
+
+    if (!callLogs || callLogs.length === 0) {
+      const currUser = await User.findById(userId);
+      if (currUser && currUser.mobile) {
+        const cleanPhone = currUser.mobile.toString().replace(/\D/g, "").slice(-10);
+        callLogs = await CallLog.find({
+          astrologer: { $exists: true, $ne: null },
+          $or: [
+            { userPhoneMasked: { $regex: cleanPhone.slice(-4) } },
+            { fromVirtualNumber: { $exists: true } },
+          ],
+        })
+          .populate("astrologer", "name image specialty")
+          .sort({ createdAt: -1 });
+      }
+    }
 
     return res.status(200).json({
       success: true,
