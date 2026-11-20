@@ -606,8 +606,13 @@ const getUserAstrologyHistory = async (req, res) => {
       .populate("astrologer", "name specialty image phone mobile experience rating badge")
       .sort({ createdAt: -1 });
 
+    // Clean up sessions: remove sessions where astrologer is missing or null, or user didn't have valid astrologer
+    sessions = (sessions || []).filter(
+      (s) => s.astrologer && (s.astrologer._id || s.astrologer.name)
+    );
+
     // 2. Fallback: If no AstrologyCallSession found, check ConsultationBooking and auto-create session
-    if (!sessions || sessions.length === 0) {
+    if (sessions.length === 0) {
       const bookings = await ConsultationBooking.find({
         user: matchUserQuery,
         paymentStatus: "Paid",
@@ -616,7 +621,7 @@ const getUserAstrologyHistory = async (req, res) => {
         .sort({ createdAt: -1 });
 
       for (const b of bookings) {
-        if (b.astrologer) {
+        if (b.astrologer && (b.astrologer._id || b.astrologer.name)) {
           const totalSecs = (Number(b.amount) >= 250 ? 15 : 10) * 60;
           const newSession = await AstrologyCallSession.create({
             user: b.user,
@@ -633,7 +638,7 @@ const getUserAstrologyHistory = async (req, res) => {
             "astrologer",
             "name specialty image phone mobile experience rating badge"
           );
-          if (populated) sessions.push(populated);
+          if (populated && populated.astrologer) sessions.push(populated);
         }
       }
     }
