@@ -466,15 +466,17 @@ const handleOmixoWebhook = async (req, res) => {
     const eventData = req.body || {};
     console.log("Omixo Webhook Received:", JSON.stringify(eventData));
 
-    const event = (eventData.event || eventData.type || "").toString().toLowerCase();
-    const session_id = eventData.session_id || eventData.call_id || eventData.id || eventData.callSid;
-    const duration = Number(eventData.duration || eventData.billsec || eventData.talk_seconds || eventData.talk_duration) || 0;
-    const talk_seconds_left = eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null;
-    const caller = eventData.caller || eventData.from || eventData.agent || "";
-    const destination = eventData.destination || eventData.to || eventData.bridged_to || "";
-    const disposition = (eventData.disposition || eventData.status || "").toString().toUpperCase();
+    // Support nested payload formats e.g. { event: "...", data: { ... } } or flat
+    const data = eventData.data || eventData.payload || eventData;
+    const event = (eventData.event || eventData.type || data.event || data.type || "").toString().toLowerCase();
+    const session_id = data.session_id || data.call_id || data.id || data.callSid || eventData.session_id || eventData.call_id;
+    const duration = Number(data.duration || data.billsec || data.talk_seconds || data.talk_duration || eventData.duration || eventData.billsec) || 0;
+    const talk_seconds_left = data.talk_seconds_left !== undefined ? Number(data.talk_seconds_left) : (eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null);
+    const caller = data.caller || data.from || data.agent || eventData.caller || eventData.from || "";
+    const destination = data.destination || data.to || data.bridged_to || eventData.destination || "";
+    const disposition = (data.disposition || data.status || eventData.disposition || eventData.status || "").toString().toUpperCase();
 
-    console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s, Disposition=${disposition}`);
+    console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s, Disposition=${disposition}, Caller=${caller}`);
 
     const isEndEvent = event.includes("completed") || event.includes("ended") || event.includes("hangup") || event.includes("cdr") || disposition.length > 0 || duration > 0;
 
@@ -503,6 +505,11 @@ const handleOmixoWebhook = async (req, res) => {
             status: "active",
           }).sort({ updatedAt: -1 });
         }
+      }
+
+      // 3. Fallback: If still not found, find most recent active session
+      if (!session) {
+        session = await AstrologyCallSession.findOne({ status: "active" }).sort({ updatedAt: -1 });
       }
 
       // Update Session
