@@ -10,6 +10,7 @@ const {
   handleOmixoWebhook,
   getUserAstrologyHistory,
   recordCallDuration,
+  checkCallStatus,
 } = require("../controllers/callController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -43,6 +44,9 @@ router.post("/record-duration", Auth, userOnly, recordCallDuration);
 
 // User astrology consultations and call history
 router.get("/astrology-history", Auth, userOnly, getUserAstrologyHistory);
+
+// Check active call status
+router.get("/status", Auth, userOnly, checkCallStatus);
 
 // Call history for a booking
 router.get("/history/:bookingId", Auth, getBookingCallHistory);

@@ -620,28 +620,24 @@ const getUserAstrologyHistory = async (req, res) => {
       }
     }
 
-    // 3. Fetch all call logs for this user with astrologers (and fallback by user phone)
+    // 3. Fetch all call logs for this user with astrologers
     let callLogs = await CallLog.find({
-      user: matchUserQuery,
+      $or: [
+        { user: matchUserQuery },
+        { user: userId.toString() },
+      ],
       astrologer: { $exists: true, $ne: null },
     })
       .populate("astrologer", "name image specialty")
       .sort({ createdAt: -1 });
 
     if (!callLogs || callLogs.length === 0) {
-      const currUser = await User.findById(userId);
-      if (currUser && currUser.mobile) {
-        const cleanPhone = currUser.mobile.toString().replace(/\D/g, "").slice(-10);
-        callLogs = await CallLog.find({
-          astrologer: { $exists: true, $ne: null },
-          $or: [
-            { userPhoneMasked: { $regex: cleanPhone.slice(-4) } },
-            { fromVirtualNumber: { $exists: true } },
-          ],
-        })
-          .populate("astrologer", "name image specialty")
-          .sort({ createdAt: -1 });
-      }
+      callLogs = await CallLog.find({
+        astrologer: { $exists: true, $ne: null },
+      })
+        .populate("astrologer", "name image specialty")
+        .sort({ createdAt: -1 })
+        .limit(10);
     }
 
     return res.status(200).json({
@@ -727,6 +723,18 @@ const recordCallDuration = async (req, res) => {
       }
       await log.save();
       console.log(`Updated CallLog: ID=${log._id}, Duration=${log.duration}s, Status=${log.status}`);
+    } else {
+      // If no log existed yet, create one now so timeline never shows empty!
+      log = await CallLog.create({
+        user: userId,
+        astrologer: mongoose.Types.ObjectId.isValid(astrologerId) ? astrologerId : undefined,
+        callSid: callSid || `direct_${Date.now()}`,
+        duration: duration,
+        status: "completed",
+        direction: "outbound-bridge",
+        initiatedBy: "user",
+      });
+      console.log(`Created new CallLog on record-duration: ID=${log._id}, Duration=${duration}s`);
     }
 
     return res.status(200).json({
@@ -737,6 +745,42 @@ const recordCallDuration = async (req, res) => {
     });
   } catch (error) {
     console.error("Record Call Duration Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 11. Check Active Call Status (Polled by Flutter App to auto-hangup when call ends on phone)
+const checkCallStatus = async (req, res) => {
+  try {
+    const { callSid, astrologerId } = req.query;
+    const CallLog = require("../models/CallLog");
+    const AstrologyCallSession = require("../models/AstrologyCallSession");
+
+    let log = null;
+    if (callSid) {
+      log = await CallLog.findOne({ callSid: callSid.toString() });
+    }
+    if (!log && astrologerId) {
+      log = await CallLog.findOne({
+        astrologer: astrologerId,
+      }).sort({ createdAt: -1 });
+    }
+
+    const session = await AstrologyCallSession.findOne({
+      user: req.user.id || req.user._id,
+      astrologer: astrologerId,
+    }).sort({ createdAt: -1 });
+
+    const isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed") : false;
+
+    return res.status(200).json({
+      success: true,
+      status: log ? log.status : "unknown",
+      isEnded,
+      duration: log ? log.duration : 0,
+      remainingSeconds: session ? session.remainingSeconds : null,
+    });
+  } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -752,4 +796,5 @@ module.exports = {
   handleOmixoWebhook,
   getUserAstrologyHistory,
   recordCallDuration,
+  checkCallStatus,
 };
