@@ -468,7 +468,7 @@ const handleOmixoWebhook = async (req, res) => {
 
     const event = (eventData.event || eventData.type || "").toString().toLowerCase();
     const session_id = eventData.session_id || eventData.call_id || eventData.id || eventData.callSid;
-    const duration = Number(eventData.duration || eventData.billsec || eventData.talk_seconds) || 0;
+    const duration = Number(eventData.duration || eventData.billsec || eventData.talk_seconds || eventData.talk_duration) || 0;
     const talk_seconds_left = eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null;
     const caller = eventData.caller || eventData.from || eventData.agent || "";
     const destination = eventData.destination || eventData.to || eventData.bridged_to || "";
@@ -476,7 +476,7 @@ const handleOmixoWebhook = async (req, res) => {
 
     console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s, Disposition=${disposition}`);
 
-    const isEndEvent = event.includes("completed") || event.includes("ended") || event.includes("hangup") || disposition.length > 0;
+    const isEndEvent = event.includes("completed") || event.includes("ended") || event.includes("hangup") || event.includes("cdr") || disposition.length > 0 || duration > 0;
 
     if (isEndEvent) {
       const AstrologyCallSession = require("../models/AstrologyCallSession");
@@ -539,19 +539,19 @@ const handleOmixoWebhook = async (req, res) => {
         if (updateRes.matchedCount > 0) logUpdated = true;
       }
 
-      // Fallback: If not matched by SID, update the most recent 'initiated' call log
+      // Fallback: If not matched by SID, update the most recent 'initiated' or astrologer call log
       if (!logUpdated) {
         const latestLog = await CallLog.findOne({
-          status: "initiated",
           astrologer: { $exists: true, $ne: null },
+          duration: { $lte: 0 },
         }).sort({ createdAt: -1 });
 
         if (latestLog) {
-          latestLog.status = disposition === "ANSWERED" || duration > 0 ? "completed" : "no-answer";
-          latestLog.duration = duration;
+          latestLog.status = disposition === "ANSWERED" || duration > 0 ? "completed" : (disposition.toLowerCase() || "completed");
+          if (duration > 0) latestLog.duration = duration;
           if (session_id) latestLog.callSid = session_id.toString();
           await latestLog.save();
-          console.log(`Updated Latest CallLog via Fallback: ID=${latestLog._id}, Duration=${duration}s`);
+          console.log(`Updated Latest CallLog via Fallback: ID=${latestLog._id}, Duration=${latestLog.duration}s`);
         }
       }
     }
@@ -569,14 +569,19 @@ const getUserAstrologyHistory = async (req, res) => {
     const userId = req.user.id || req.user._id;
     const AstrologyCallSession = require("../models/AstrologyCallSession");
 
+    // Match userId as either ObjectId or string
+    const matchUserQuery = mongoose.Types.ObjectId.isValid(userId)
+      ? { $in: [userId, new mongoose.Types.ObjectId(userId)] }
+      : userId;
+
     // Fetch all consultation sessions for this user
-    const sessions = await AstrologyCallSession.find({ user: userId })
+    const sessions = await AstrologyCallSession.find({ user: matchUserQuery })
       .populate("astrologer", "name specialty image phone mobile experience rating badge")
       .sort({ createdAt: -1 });
 
     // Fetch all call logs for this user with astrologers
     const callLogs = await CallLog.find({
-      user: userId,
+      user: matchUserQuery,
       astrologer: { $exists: true, $ne: null },
     })
       .populate("astrologer", "name image specialty")
@@ -600,21 +605,34 @@ const recordCallDuration = async (req, res) => {
     const { astrologerId, durationSeconds, callSid } = req.body;
     const duration = Number(durationSeconds) || 0;
 
-    if (!astrologerId || duration <= 0) {
-      return res.status(200).json({ success: true, message: "No duration to record" });
+    if (!astrologerId) {
+      return res.status(400).json({ success: false, message: "astrologerId is required" });
     }
 
     const AstrologyCallSession = require("../models/AstrologyCallSession");
     const CallLog = require("../models/CallLog");
 
+    // Match astrologerId as either ObjectId or string
+    const matchAstroQuery = mongoose.Types.ObjectId.isValid(astrologerId)
+      ? { $in: [astrologerId, new mongoose.Types.ObjectId(astrologerId)] }
+      : astrologerId;
+
     // 1. Update or deduct from active session
-    const session = await AstrologyCallSession.findOne({
+    let session = await AstrologyCallSession.findOne({
       user: userId,
-      astrologer: astrologerId,
+      astrologer: matchAstroQuery,
       status: "active",
     }).sort({ createdAt: -1 });
 
-    if (session) {
+    // Fallback if not matched by specific astrologer: update latest active session for user
+    if (!session) {
+      session = await AstrologyCallSession.findOne({
+        user: userId,
+        status: "active",
+      }).sort({ createdAt: -1 });
+    }
+
+    if (session && duration > 0) {
       session.consumedSeconds = (session.consumedSeconds || 0) + duration;
       session.remainingSeconds = Math.max(0, session.totalDurationSeconds - session.consumedSeconds);
       if (session.remainingSeconds <= 15) {
@@ -633,14 +651,25 @@ const recordCallDuration = async (req, res) => {
     if (!log) {
       log = await CallLog.findOne({
         user: userId,
-        astrologer: astrologerId,
+        astrologer: matchAstroQuery,
+      }).sort({ createdAt: -1 });
+    }
+    if (!log) {
+      log = await CallLog.findOne({
+        user: userId,
+        astrologer: { $exists: true, $ne: null },
       }).sort({ createdAt: -1 });
     }
 
     if (log) {
-      log.duration = duration;
-      log.status = "completed";
+      if (duration > 0) {
+        log.duration = duration;
+        log.status = "completed";
+      } else if (log.status === "initiated") {
+        log.status = "completed";
+      }
       await log.save();
+      console.log(`Updated CallLog: ID=${log._id}, Duration=${log.duration}s, Status=${log.status}`);
     }
 
     return res.status(200).json({
