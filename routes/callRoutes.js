@@ -11,6 +11,7 @@ const {
   getUserAstrologyHistory,
   recordCallDuration,
   checkCallStatus,
+  hangupActiveCall,
 } = require("../controllers/callController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -47,6 +48,9 @@ router.get("/astrology-history", Auth, userOnly, getUserAstrologyHistory);
 
 // Check active call status
 router.get("/status", Auth, userOnly, checkCallStatus);
+
+// Hangup/Terminate active call from App
+router.post("/hangup", Auth, userOnly, hangupActiveCall);
 
 // Call history for a booking
 router.get("/history/:bookingId", Auth, getBookingCallHistory);

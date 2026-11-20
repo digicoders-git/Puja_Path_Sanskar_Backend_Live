@@ -109,9 +109,41 @@ async function initiateClickToCall({ userPhone, panditPhone, ttlMinutes, maxDura
   }
 }
 
+/**
+ * Hangs up an active call on Omixo CPaaS
+ */
+async function hangupCall(callId) {
+  const apiKey = process.env.OMIXO_API_KEY;
+  const baseUrl = (process.env.OMIXO_BASE_URL || "https://api.omixo.ai/api/v1").replace(/\/$/, "");
+
+  if (!apiKey || !callId) {
+    return { success: false, message: "Missing API key or callId" };
+  }
+
+  try {
+    const response = await axios.post(
+      `${baseUrl}/calls/hangup`,
+      { call_id: callId.toString() },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey,
+        },
+        timeout: 8000,
+      }
+    );
+    console.log(`Omixo Call Hangup Success for ${callId}:`, response.data);
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.warn(`Omixo Hangup Error for ${callId}:`, error.response?.data || error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 module.exports = {
   isConfigured,
   initiateClickToCall,
+  hangupCall,
   maskPhoneNumber,
   cleanIndianNumber,
 };

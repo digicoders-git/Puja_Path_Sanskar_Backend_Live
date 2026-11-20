@@ -762,16 +762,17 @@ const checkCallStatus = async (req, res) => {
     }
     if (!log && astrologerId) {
       log = await CallLog.findOne({
+        user: req.user.id || req.user._id,
         astrologer: astrologerId,
       }).sort({ createdAt: -1 });
     }
 
     const session = await AstrologyCallSession.findOne({
       user: req.user.id || req.user._id,
-      astrologer: astrologerId,
+      ...(astrologerId ? { astrologer: astrologerId } : {}),
     }).sort({ createdAt: -1 });
 
-    const isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed") : false;
+    const isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed" || log.status === "busy" || log.status === "canceled") : false;
 
     return res.status(200).json({
       success: true,
@@ -781,6 +782,46 @@ const checkCallStatus = async (req, res) => {
       remainingSeconds: session ? session.remainingSeconds : null,
     });
   } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 12. Terminate / Hangup Active Call from App
+const hangupActiveCall = async (req, res) => {
+  try {
+    const { callSid, astrologerId } = req.body;
+    console.log(`Hangup Request from App: CallSID=${callSid}, Astro=${astrologerId}`);
+
+    const CallLog = require("../models/CallLog");
+    const omixoService = require("../services/omixoService");
+
+    let sid = callSid;
+    if (!sid && astrologerId) {
+      const latestLog = await CallLog.findOne({
+        user: req.user.id || req.user._id,
+        astrologer: astrologerId,
+        status: { $in: ["initiated", "ringing", "in-progress"] },
+      }).sort({ createdAt: -1 });
+      if (latestLog) sid = latestLog.callSid;
+    }
+
+    if (sid) {
+      // 1. Terminate on Omixo carrier trunk
+      await omixoService.hangupCall(sid);
+
+      // 2. Mark CallLog as completed/canceled
+      await CallLog.updateMany(
+        { callSid: sid.toString() },
+        { $set: { status: "completed" } }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "कॉल सफलतापूर्वक डिस्कनेक्ट कर दी गई है।",
+    });
+  } catch (error) {
+    console.error("Hangup Call Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -797,4 +838,5 @@ module.exports = {
   getUserAstrologyHistory,
   recordCallDuration,
   checkCallStatus,
+  hangupActiveCall,
 };
