@@ -8,6 +8,7 @@ const {
   initiateAstrologerMaskedCall,
   getAstrologerBridgeTwiML,
   handleOmixoWebhook,
+  getUserAstrologyHistory,
 } = require("../controllers/callController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -35,6 +36,9 @@ router.post("/astrologer-bridge-twiml/:astrologerId", getAstrologerBridgeTwiML);
 
 // Omixo Webhook (Call Completed, CDR, Talk seconds left)
 router.post("/omixo-webhook", handleOmixoWebhook);
+
+// User astrology consultations and call history
+router.get("/astrology-history", Auth, userOnly, getUserAstrologyHistory);
 
 // Call history for a booking
 router.get("/history/:bookingId", Auth, getBookingCallHistory);

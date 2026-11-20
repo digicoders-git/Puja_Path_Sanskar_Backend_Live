@@ -547,6 +547,36 @@ const handleOmixoWebhook = async (req, res) => {
   }
 };
 
+// 9. Get Astrologer Call History & Consultation Sessions for User
+const getUserAstrologyHistory = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const AstrologyCallSession = require("../models/AstrologyCallSession");
+
+    // Fetch all consultation sessions for this user
+    const sessions = await AstrologyCallSession.find({ user: userId })
+      .populate("astrologer", "name specialty image phone mobile experience rating badge")
+      .sort({ createdAt: -1 });
+
+    // Fetch all call logs for this user with astrologers
+    const callLogs = await CallLog.find({
+      user: userId,
+      astrologer: { $exists: true, $ne: null },
+    })
+      .populate("astrologer", "name image specialty")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      sessions,
+      callLogs,
+    });
+  } catch (error) {
+    console.error("Astrology History Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   initiateMaskedCall,
   getBridgeTwiML,
@@ -556,4 +586,5 @@ module.exports = {
   initiateAstrologerMaskedCall,
   getAstrologerBridgeTwiML,
   handleOmixoWebhook,
+  getUserAstrologyHistory,
 };
