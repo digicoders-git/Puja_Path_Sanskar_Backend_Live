@@ -466,18 +466,22 @@ const handleOmixoWebhook = async (req, res) => {
     const eventData = req.body || {};
     console.log("Omixo Webhook Received:", JSON.stringify(eventData));
 
-    const event = eventData.event || eventData.type;
-    const session_id = eventData.session_id || eventData.call_id || eventData.id;
-    const duration = Number(eventData.duration) || 0;
+    const event = (eventData.event || eventData.type || "").toString().toLowerCase();
+    const session_id = eventData.session_id || eventData.call_id || eventData.id || eventData.callSid;
+    const duration = Number(eventData.duration || eventData.billsec || eventData.talk_seconds) || 0;
     const talk_seconds_left = eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null;
-    const caller = eventData.caller || "";
-    const disposition = (eventData.disposition || "").toUpperCase();
+    const caller = eventData.caller || eventData.from || eventData.agent || "";
+    const destination = eventData.destination || eventData.to || eventData.bridged_to || "";
+    const disposition = (eventData.disposition || eventData.status || "").toString().toUpperCase();
 
-    // Only process if call was completed/ended
-    if (event === "call_completed" || event === "call.completed" || disposition) {
+    console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s, Disposition=${disposition}`);
+
+    const isEndEvent = event.includes("completed") || event.includes("ended") || event.includes("hangup") || disposition.length > 0;
+
+    if (isEndEvent) {
       const AstrologyCallSession = require("../models/AstrologyCallSession");
 
-      // Find by lastCallSid or session_id
+      // 1. Find by session_id or callSid
       let session = null;
       if (session_id) {
         session = await AstrologyCallSession.findOne({
@@ -488,7 +492,7 @@ const handleOmixoWebhook = async (req, res) => {
         });
       }
 
-      // If not found by SID, find the latest active session by caller phone
+      // 2. Fallback: Find latest active session by caller phone
       if (!session && caller) {
         const User = require("../models/User");
         const cleanPhone = caller.toString().replace(/\D/g, "").slice(-10);
@@ -501,14 +505,10 @@ const handleOmixoWebhook = async (req, res) => {
         }
       }
 
+      // Update Session
       if (session) {
-        // Only deduct if call was actually answered and talk duration > 5 seconds
-        // Prevent deduction if call was just ringing, busy, or dropped without connect
-        const wasAnswered = disposition === "ANSWERED" || duration > 5;
-        
-        if (wasAnswered) {
+        if (duration > 0) {
           session.consumedSeconds = (session.consumedSeconds || 0) + duration;
-          
           if (talk_seconds_left !== null && !isNaN(talk_seconds_left) && talk_seconds_left >= 0) {
             session.remainingSeconds = talk_seconds_left;
           } else {
@@ -520,23 +520,39 @@ const handleOmixoWebhook = async (req, res) => {
             session.remainingSeconds = 0;
           }
           await session.save();
-          console.log(`Astrology Session Updated (Answered): ID=${session._id}, Consumed=${session.consumedSeconds}s, Remaining=${session.remainingSeconds}s, Status=${session.status}`);
-        } else {
-          console.log(`Astrology Call NOT Answered/Too Short (Disposition=${disposition}, Duration=${duration}s). Balance NOT deducted. Remaining=${session.remainingSeconds}s`);
+          console.log(`Astrology Session Updated: ID=${session._id}, Consumed=${session.consumedSeconds}s, Remaining=${session.remainingSeconds}s`);
         }
       }
 
-      // Update CallLog if present
+      // 3. Update CallLog: Try session_id, or fallback to user's latest initiated call
+      let logUpdated = false;
       if (session_id) {
-        await CallLog.updateMany(
+        const updateRes = await CallLog.updateMany(
           { callSid: session_id.toString() },
           {
             $set: {
-              status: "completed",
+              status: disposition === "ANSWERED" || duration > 0 ? "completed" : "no-answer",
               duration: duration,
             },
           }
         );
+        if (updateRes.matchedCount > 0) logUpdated = true;
+      }
+
+      // Fallback: If not matched by SID, update the most recent 'initiated' call log
+      if (!logUpdated) {
+        const latestLog = await CallLog.findOne({
+          status: "initiated",
+          astrologer: { $exists: true, $ne: null },
+        }).sort({ createdAt: -1 });
+
+        if (latestLog) {
+          latestLog.status = disposition === "ANSWERED" || duration > 0 ? "completed" : "no-answer";
+          latestLog.duration = duration;
+          if (session_id) latestLog.callSid = session_id.toString();
+          await latestLog.save();
+          console.log(`Updated Latest CallLog via Fallback: ID=${latestLog._id}, Duration=${duration}s`);
+        }
       }
     }
 
