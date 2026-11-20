@@ -593,6 +593,68 @@ const getUserAstrologyHistory = async (req, res) => {
   }
 };
 
+// 10. Direct Sync Call Duration from App when Call Ends
+const recordCallDuration = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const { astrologerId, durationSeconds, callSid } = req.body;
+    const duration = Number(durationSeconds) || 0;
+
+    if (!astrologerId || duration <= 0) {
+      return res.status(200).json({ success: true, message: "No duration to record" });
+    }
+
+    const AstrologyCallSession = require("../models/AstrologyCallSession");
+    const CallLog = require("../models/CallLog");
+
+    // 1. Update or deduct from active session
+    const session = await AstrologyCallSession.findOne({
+      user: userId,
+      astrologer: astrologerId,
+      status: "active",
+    }).sort({ createdAt: -1 });
+
+    if (session) {
+      session.consumedSeconds = (session.consumedSeconds || 0) + duration;
+      session.remainingSeconds = Math.max(0, session.totalDurationSeconds - session.consumedSeconds);
+      if (session.remainingSeconds <= 15) {
+        session.status = "completed";
+        session.remainingSeconds = 0;
+      }
+      await session.save();
+      console.log(`Direct Recorded Duration: User=${userId}, Astro=${astrologerId}, Duration=${duration}s, Remaining=${session.remainingSeconds}s`);
+    }
+
+    // 2. Update latest CallLog
+    let log = null;
+    if (callSid) {
+      log = await CallLog.findOne({ callSid: callSid.toString() });
+    }
+    if (!log) {
+      log = await CallLog.findOne({
+        user: userId,
+        astrologer: astrologerId,
+      }).sort({ createdAt: -1 });
+    }
+
+    if (log) {
+      log.duration = duration;
+      log.status = "completed";
+      await log.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Call duration recorded",
+      remainingSeconds: session ? session.remainingSeconds : 0,
+      consumedSeconds: session ? session.consumedSeconds : duration,
+    });
+  } catch (error) {
+    console.error("Record Call Duration Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   initiateMaskedCall,
   getBridgeTwiML,
@@ -603,4 +665,5 @@ module.exports = {
   getAstrologerBridgeTwiML,
   handleOmixoWebhook,
   getUserAstrologyHistory,
+  recordCallDuration,
 };
