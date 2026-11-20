@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const User = require("../models/User");
 const Pandit = require("../models/Pandit");
