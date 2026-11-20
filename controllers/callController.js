@@ -575,18 +575,51 @@ const getUserAstrologyHistory = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const AstrologyCallSession = require("../models/AstrologyCallSession");
+    const ConsultationBooking = require("../models/ConsultationBooking");
 
     // Match userId as either ObjectId or string
     const matchUserQuery = mongoose.Types.ObjectId.isValid(userId)
       ? { $in: [userId, new mongoose.Types.ObjectId(userId)] }
       : userId;
 
-    // Fetch all consultation sessions for this user
-    const sessions = await AstrologyCallSession.find({ user: matchUserQuery })
+    // 1. Fetch all consultation sessions for this user
+    let sessions = await AstrologyCallSession.find({ user: matchUserQuery })
       .populate("astrologer", "name specialty image phone mobile experience rating badge")
       .sort({ createdAt: -1 });
 
-    // Fetch all call logs for this user with astrologers
+    // 2. Fallback: If no AstrologyCallSession found, check ConsultationBooking and auto-create session
+    if (!sessions || sessions.length === 0) {
+      const bookings = await ConsultationBooking.find({
+        user: matchUserQuery,
+        paymentStatus: "Paid",
+      })
+        .populate("astrologer", "name specialty image phone mobile experience rating badge")
+        .sort({ createdAt: -1 });
+
+      for (const b of bookings) {
+        if (b.astrologer) {
+          const totalSecs = (Number(b.amount) >= 250 ? 15 : 10) * 60;
+          const newSession = await AstrologyCallSession.create({
+            user: b.user,
+            astrologer: b.astrologer._id,
+            totalDurationSeconds: totalSecs,
+            remainingSeconds: totalSecs,
+            consumedSeconds: 0,
+            status: "active",
+            planTitle: `${totalSecs ~/ 60} Min Consultation`,
+            amount: b.amount || 0,
+            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+          });
+          const populated = await AstrologyCallSession.findById(newSession._id).populate(
+            "astrologer",
+            "name specialty image phone mobile experience rating badge"
+          );
+          if (populated) sessions.push(populated);
+        }
+      }
+    }
+
+    // 3. Fetch all call logs for this user with astrologers
     const callLogs = await CallLog.find({
       user: matchUserQuery,
       astrologer: { $exists: true, $ne: null },

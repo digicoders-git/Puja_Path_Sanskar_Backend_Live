@@ -347,12 +347,44 @@ const verifyConsultationPayment = async (req, res) => {
     const astro = await Astrologer.findById(notes.astrologerId);
     const astrologerPhone = astro ? (astro.phone || astro.mobile || "") : "";
 
+    // Automatically create or activate an AstrologyCallSession so user immediately sees active session in Booking History & Detail Screen
+    const AstrologyCallSession = require("../models/AstrologyCallSession");
+    const durationMinutes = Number(notes.durationMinutes) || (Number(notes.amount) >= 250 ? 15 : 10);
+    const totalSeconds = durationMinutes * 60;
+
+    let activeCallSession = await AstrologyCallSession.findOne({
+      user: notes.userId,
+      astrologer: notes.astrologerId,
+      status: "active",
+    });
+
+    if (activeCallSession) {
+      activeCallSession.totalDurationSeconds += totalSeconds;
+      activeCallSession.remainingSeconds += totalSeconds;
+      activeCallSession.amount = (activeCallSession.amount || 0) + Number(notes.amount || 0);
+      activeCallSession.expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      await activeCallSession.save();
+    } else {
+      activeCallSession = await AstrologyCallSession.create({
+        user: notes.userId,
+        astrologer: notes.astrologerId,
+        totalDurationSeconds: totalSeconds,
+        remainingSeconds: totalSeconds,
+        consumedSeconds: 0,
+        status: "active",
+        planTitle: `${durationMinutes} Min Consultation`,
+        amount: Number(notes.amount) || 0,
+        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Consultation payment verified and booked successfully!",
       booking,
       astrologerPhone,
       astrologer: astro,
+      session: activeCallSession,
     });
   } catch (error) {
     res.status(500).json({ message: error.message, success: false });
