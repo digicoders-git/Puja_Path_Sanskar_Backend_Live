@@ -329,12 +329,41 @@ const initiateAstrologerMaskedCall = async (req, res) => {
       });
     }
 
+    const AstrologyCallSession = require("../models/AstrologyCallSession");
+    let activeSession = await AstrologyCallSession.findOne({
+      user: user._id,
+      astrologer: astrologer._id,
+      status: "active",
+      remainingSeconds: { $gt: 10 },
+    }).sort({ createdAt: -1 });
+
+    // If no active session found or duration passed from body, create or track session
+    const durationMinutes = Number(req.body.durationMinutes) || (activeSession ? Math.ceil(activeSession.remainingSeconds / 60) : 10);
+    const maxSeconds = activeSession ? activeSession.remainingSeconds : durationMinutes * 60;
+    const ttlMinutes = Math.max(1, Math.ceil(maxSeconds / 60));
+
+    if (!activeSession) {
+      activeSession = await AstrologyCallSession.create({
+        user: user._id,
+        astrologer: astrologer._id,
+        totalDurationSeconds: maxSeconds,
+        remainingSeconds: maxSeconds,
+        consumedSeconds: 0,
+        status: "active",
+        planTitle: req.body.planTitle || `${durationMinutes} Min Consultation`,
+        amount: Number(req.body.amount) || 0,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours validity for unused minutes
+      });
+    }
+
     let result;
     if (hasOmixo) {
       // Omixo Click-to-Call: User phone rings first, then bridges to Astrologer
       result = await omixoService.initiateClickToCall({
         userPhone,
         panditPhone: astrologerPhone,
+        ttlMinutes,
+        maxDurationSeconds: maxSeconds,
       });
     } else {
       const baseUrl =
@@ -352,9 +381,14 @@ const initiateAstrologerMaskedCall = async (req, res) => {
       });
     }
 
+    // Update active session with lastCallSid
+    activeSession.lastCallSid = result.callSid;
+    await activeSession.save();
+
     // Save CallLog for audit
     await CallLog.create({
       user: user._id,
+      astrologer: astrologer._id,
       callSid: result.callSid,
       fromVirtualNumber: result.from,
       userPhoneMasked: result.userPhoneMasked,
@@ -371,6 +405,8 @@ const initiateAstrologerMaskedCall = async (req, res) => {
       virtualNumber: result.from,
       panditPhoneMasked: result.panditPhoneMasked,
       astrologerPhoneMasked: result.panditPhoneMasked,
+      sessionId: activeSession._id,
+      remainingSeconds: activeSession.remainingSeconds,
     });
   } catch (error) {
     console.error("Astrologer Masked Call Error:", error);
@@ -424,6 +460,84 @@ const getAstrologerBridgeTwiML = async (req, res) => {
   }
 };
 
+// 8. Omixo Webhook (Fired on call events like call_connected, call_completed)
+const handleOmixoWebhook = async (req, res) => {
+  try {
+    const eventData = req.body || {};
+    console.log("Omixo Webhook Received:", JSON.stringify(eventData));
+
+    const event = eventData.event || eventData.type;
+    const session_id = eventData.session_id || eventData.call_id || eventData.id;
+    const duration = Number(eventData.duration) || 0;
+    const talk_seconds_left = eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null;
+    const caller = eventData.caller || "";
+
+    if (event === "call_completed" || event === "call.completed" || eventData.disposition) {
+      const AstrologyCallSession = require("../models/AstrologyCallSession");
+
+      // Find by lastCallSid or session_id
+      let session = null;
+      if (session_id) {
+        session = await AstrologyCallSession.findOne({
+          $or: [
+            { lastCallSid: session_id.toString() },
+            { _id: mongoose.Types.ObjectId.isValid(session_id) ? session_id : null },
+          ],
+        });
+      }
+
+      // If not found by SID, find the latest active session by caller phone
+      if (!session && caller) {
+        const User = require("../models/User");
+        const cleanPhone = caller.toString().replace(/\D/g, "").slice(-10);
+        const user = await User.findOne({ mobile: { $regex: cleanPhone } });
+        if (user) {
+          session = await AstrologyCallSession.findOne({
+            user: user._id,
+            status: "active",
+          }).sort({ updatedAt: -1 });
+        }
+      }
+
+      if (session) {
+        session.consumedSeconds = (session.consumedSeconds || 0) + duration;
+        
+        if (talk_seconds_left !== null && !isNaN(talk_seconds_left)) {
+          session.remainingSeconds = Math.max(0, talk_seconds_left);
+        } else {
+          session.remainingSeconds = Math.max(0, session.totalDurationSeconds - session.consumedSeconds);
+        }
+
+        if (session.remainingSeconds <= 15) {
+          session.status = "completed";
+          session.remainingSeconds = 0;
+        }
+
+        await session.save();
+        console.log(`Astrology Session Updated: ID=${session._id}, Consumed=${session.consumedSeconds}s, Remaining=${session.remainingSeconds}s, Status=${session.status}`);
+      }
+
+      // Update CallLog if present
+      if (session_id) {
+        await CallLog.updateMany(
+          { callSid: session_id.toString() },
+          {
+            $set: {
+              status: "completed",
+              duration: duration,
+            },
+          }
+        );
+      }
+    }
+
+    return res.status(200).json({ success: true, message: "Webhook processed" });
+  } catch (error) {
+    console.error("Omixo Webhook Error:", error);
+    return res.status(200).json({ success: true, message: "Webhook error handled" });
+  }
+};
+
 module.exports = {
   initiateMaskedCall,
   getBridgeTwiML,
@@ -432,4 +546,5 @@ module.exports = {
   getBookingCallHistory,
   initiateAstrologerMaskedCall,
   getAstrologerBridgeTwiML,
+  handleOmixoWebhook,
 };

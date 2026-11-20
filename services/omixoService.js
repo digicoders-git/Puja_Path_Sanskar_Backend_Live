@@ -38,7 +38,7 @@ function isConfigured() {
  * Initiates click-to-call bridge between User and Pandit using Omixo CPaaS API
  * User's phone rings first (agent), and upon pickup, it bridges to Pandit (destination).
  */
-async function initiateClickToCall({ userPhone, panditPhone }) {
+async function initiateClickToCall({ userPhone, panditPhone, ttlMinutes, maxDurationSeconds }) {
   const apiKey = process.env.OMIXO_API_KEY;
   const baseUrl = (process.env.OMIXO_BASE_URL || "https://api.omixo.ai/api/v1").replace(/\/$/, "");
   const callerId = process.env.OMIXO_CALLER_ID || "915226523606";
@@ -64,6 +64,15 @@ async function initiateClickToCall({ userPhone, panditPhone }) {
 
   if (callerId) {
     payload.caller_id = callerId.toString().replace(/\D/g, "");
+  }
+
+  // Pass auto-cut time limit if provided
+  if (ttlMinutes) {
+    payload.ttl_minutes = Number(ttlMinutes);
+  }
+  if (maxDurationSeconds) {
+    payload.max_duration = Number(maxDurationSeconds);
+    payload.time_limit = Number(maxDurationSeconds);
   }
 
   try {

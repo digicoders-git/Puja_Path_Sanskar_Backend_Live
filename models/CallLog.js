@@ -5,7 +5,12 @@ const callLogSchema = new mongoose.Schema(
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      required: true,
+      required: false,
+    },
+    astrologer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Astrologer",
+      required: false,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +20,7 @@ const callLogSchema = new mongoose.Schema(
     pandit: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Pandit",
-      required: true,
+      required: false,
     },
     callSid: {
       type: String,

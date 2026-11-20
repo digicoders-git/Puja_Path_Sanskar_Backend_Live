@@ -7,6 +7,7 @@ const {
   getBookingCallHistory,
   initiateAstrologerMaskedCall,
   getAstrologerBridgeTwiML,
+  handleOmixoWebhook,
 } = require("../controllers/callController");
 const { Auth, userOnly } = require("../middleware/authMiddleware");
 
@@ -31,6 +32,9 @@ router.post("/astrologer/initiate", Auth, userOnly, initiateAstrologerMaskedCall
 // Public Bridge TwiML for Astrologer (Twilio Cloud fetches this to bridge user and astrologer)
 router.get("/astrologer-bridge-twiml/:astrologerId", getAstrologerBridgeTwiML);
 router.post("/astrologer-bridge-twiml/:astrologerId", getAstrologerBridgeTwiML);
+
+// Omixo Webhook (Call Completed, CDR, Talk seconds left)
+router.post("/omixo-webhook", handleOmixoWebhook);
 
 // Call history for a booking
 router.get("/history/:bookingId", Auth, getBookingCallHistory);
