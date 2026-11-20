@@ -772,7 +772,21 @@ const checkCallStatus = async (req, res) => {
       ...(astrologerId ? { astrologer: astrologerId } : {}),
     }).sort({ createdAt: -1 });
 
-    const isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed" || log.status === "busy" || log.status === "canceled") : false;
+    // If active session remaining seconds is <= 0, automatically hang up on carrier and mark completed
+    let isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed" || log.status === "busy" || log.status === "canceled") : false;
+
+    if (session && session.remainingSeconds <= 0 && !isEnded) {
+      isEnded = true;
+      if (log) {
+        log.status = "completed";
+        await log.save();
+      }
+      const omixoService = require("../services/omixoService");
+      const sid = callSid || (log ? log.callSid : null);
+      if (sid) {
+        omixoService.hangupCall(sid).catch((e) => console.warn("Auto-hangup on 0 remaining seconds:", e.message));
+      }
+    }
 
     return res.status(200).json({
       success: true,

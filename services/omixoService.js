@@ -90,6 +90,15 @@ async function initiateClickToCall({ userPhone, panditPhone, ttlMinutes, maxDura
       response.data?.session_id ||
       `omixo_${Date.now()}`;
 
+    // Apply strict duration cap via /calls/extend if maxDurationSeconds is specified
+    if (maxDurationSeconds && maxDurationSeconds > 0) {
+      setTimeout(() => {
+        setCallDurationCap(callSid, maxDurationSeconds).catch((e) =>
+          console.warn("Could not set initial duration cap on Omixo:", e.message)
+        );
+      }, 1000);
+    }
+
     return {
       success: true,
       callSid,
@@ -106,6 +115,38 @@ async function initiateClickToCall({ userPhone, panditPhone, ttlMinutes, maxDura
       error.message ||
       "Omixo कॉल सेवा से कनेक्ट नहीं हो सका।";
     throw new Error(apiError);
+  }
+}
+
+/**
+ * Sets / resets talk-time cap for an in-progress call on Omixo
+ */
+async function setCallDurationCap(callId, seconds) {
+  const apiKey = process.env.OMIXO_API_KEY;
+  const baseUrl = (process.env.OMIXO_BASE_URL || "https://api.omixo.ai/api/v1").replace(/\/$/, "");
+
+  if (!apiKey || !callId) return { success: false };
+
+  try {
+    const response = await axios.post(
+      `${baseUrl}/calls/extend`,
+      {
+        call_id: callId.toString(),
+        seconds: Math.max(10, Number(seconds)),
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey,
+        },
+        timeout: 8000,
+      }
+    );
+    console.log(`Omixo Call Duration Cap Set: call=${callId}, seconds=${seconds}`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.warn(`Omixo Extend/Cap Error for ${callId}:`, error.response?.data || error.message);
+    return { success: false, message: error.message };
   }
 }
 
@@ -143,6 +184,7 @@ async function hangupCall(callId) {
 module.exports = {
   isConfigured,
   initiateClickToCall,
+  setCallDurationCap,
   hangupCall,
   maskPhoneNumber,
   cleanIndianNumber,
