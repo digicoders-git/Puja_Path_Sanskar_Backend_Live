@@ -341,6 +341,20 @@ const initiateAstrologerMaskedCall = async (req, res) => {
       remainingSeconds: { $gt: 10 },
     }).sort({ createdAt: -1 });
 
+    // STRICT CHECK: If user has an existing session for this astrologer but time is 0 or completed
+    const existingSession = await AstrologyCallSession.findOne({
+      user: user._id,
+      astrologer: astrologer._id,
+    }).sort({ createdAt: -1 });
+
+    if (existingSession && (existingSession.remainingSeconds <= 10 || existingSession.status === "completed")) {
+      return res.status(400).json({
+        success: false,
+        message: "आपकी परामर्श अवधि समाप्त हो चुकी है। कृपया बात करने के लिए पुनः रीचार्ज करें।",
+        isExpired: true,
+      });
+    }
+
     // If no active session found or duration passed from body, create or track session
     const durationMinutes = Number(req.body.durationMinutes) || (activeSession ? Math.ceil(activeSession.remainingSeconds / 60) : 10);
     const maxSeconds = activeSession ? activeSession.remainingSeconds : durationMinutes * 60;
@@ -624,24 +638,24 @@ const getUserAstrologyHistory = async (req, res) => {
       }
     }
 
-    // 3. Fetch all call logs for this user with astrologers
+    // 3. Fetch all call logs for this user (robust matching by ObjectId or string)
     let callLogs = await CallLog.find({
       $or: [
         { user: matchUserQuery },
         { user: userId.toString() },
       ],
-      astrologer: { $exists: true, $ne: null },
     })
-      .populate("astrologer", "name image specialty")
+      .populate("astrologer", "name image specialty phone mobile")
       .sort({ createdAt: -1 });
 
+    // Fallback: If still empty, fetch latest calls with astrologers
     if (!callLogs || callLogs.length === 0) {
       callLogs = await CallLog.find({
         astrologer: { $exists: true, $ne: null },
       })
-        .populate("astrologer", "name image specialty")
+        .populate("astrologer", "name image specialty phone mobile")
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(20);
     }
 
     return res.status(200).json({
@@ -776,17 +790,18 @@ const checkCallStatus = async (req, res) => {
       ...(astrologerId ? { astrologer: astrologerId } : {}),
     }).sort({ createdAt: -1 });
 
-    // If active session remaining seconds is <= 0, automatically hang up on carrier and mark completed
+    // 1. Check if call completed or ended
     let isEnded = log ? (log.status === "completed" || log.status === "no-answer" || log.status === "failed" || log.status === "busy" || log.status === "canceled") : false;
 
-    if (session && session.remainingSeconds <= 0 && !isEnded) {
+    // 2. Strict Check: If remaining talk time is 0 or less, auto-terminate carrier line immediately!
+    if (session && session.remainingSeconds <= 0) {
       isEnded = true;
-      if (log) {
+      if (log && log.status !== "completed") {
         log.status = "completed";
         await log.save();
       }
       const omixoService = require("../services/omixoService");
-      const sid = callSid || (log ? log.callSid : null);
+      const sid = callSid || (log ? log.callSid : null) || (session ? session.lastCallSid : null);
       if (sid) {
         omixoService.hangupCall(sid).catch((e) => console.warn("Auto-hangup on 0 remaining seconds:", e.message));
       }
