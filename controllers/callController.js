@@ -497,13 +497,21 @@ const handleOmixoWebhook = async (req, res) => {
     const data = eventData.data || eventData.payload || eventData;
     const event = (eventData.event || eventData.type || data.event || data.type || "").toString().toLowerCase();
     const session_id = data.session_id || data.call_id || data.id || data.callSid || eventData.session_id || eventData.call_id;
-    const duration = Number(data.duration || data.billsec || data.talk_seconds || data.talk_duration || eventData.duration || eventData.billsec) || 0;
+    const disposition = (data.disposition || data.status || eventData.disposition || eventData.status || "").toString().toUpperCase();
+    
+    // Only bill/deduct actual connected talk time (billsec / talk_seconds / talk_duration)
+    // If astrologer didn't answer (NO-ANSWER, BUSY, FAILED), billed duration is 0!
+    const isAnswered = disposition === "ANSWERED" || disposition === "CONNECTED" || event.includes("connected") || event.includes("answered");
+    const rawBillSec = data.billsec !== undefined ? data.billsec : (data.talk_seconds || data.talk_duration || eventData.billsec);
+    const duration = (isAnswered || rawBillSec > 0)
+        ? (Number(rawBillSec !== undefined ? rawBillSec : (data.duration || eventData.duration)) || 0)
+        : 0;
+
     const talk_seconds_left = data.talk_seconds_left !== undefined ? Number(data.talk_seconds_left) : (eventData.talk_seconds_left !== undefined ? Number(eventData.talk_seconds_left) : null);
     const caller = data.caller || data.from || data.agent || eventData.caller || eventData.from || "";
     const destination = data.destination || data.to || data.bridged_to || eventData.destination || "";
-    const disposition = (data.disposition || data.status || eventData.disposition || eventData.status || "").toString().toUpperCase();
 
-    console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s, Disposition=${disposition}, Caller=${caller}`);
+    console.log(`Processing Omixo Webhook: Event=${event}, SessionID=${session_id}, Duration=${duration}s (Billsec), Disposition=${disposition}, Caller=${caller}`);
 
     const isEndEvent = event.includes("completed") || event.includes("ended") || event.includes("hangup") || event.includes("cdr") || disposition.length > 0 || duration > 0;
 
