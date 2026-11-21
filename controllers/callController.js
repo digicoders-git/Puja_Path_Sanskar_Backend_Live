@@ -334,26 +334,35 @@ const initiateAstrologerMaskedCall = async (req, res) => {
     }
 
     const AstrologyCallSession = require("../models/AstrologyCallSession");
-    let activeSession = await AstrologyCallSession.findOne({
-      user: user._id,
-      astrologer: astrologer._id,
-      status: "active",
-      remainingSeconds: { $gt: 10 },
-    }).sort({ createdAt: -1 });
 
-    // STRICT CHECK: If user has an existing session for this astrologer but time is 0 or completed
-    const existingSession = await AstrologyCallSession.findOne({
+    // Fetch the most recent session for this user and astrologer
+    const latestSession = await AstrologyCallSession.findOne({
       user: user._id,
       astrologer: astrologer._id,
     }).sort({ createdAt: -1 });
 
-    if (existingSession && (existingSession.remainingSeconds <= 10 || existingSession.status === "completed")) {
+    // STRICT CHECK: If user's latest session is completed or time <= 10s, require recharge
+    if (latestSession && (latestSession.remainingSeconds <= 10 || latestSession.status === "completed")) {
+      // Also mark any older active sessions for this pair as completed to prevent stale unconsumed sessions
+      await AstrologyCallSession.updateMany(
+        {
+          user: user._id,
+          astrologer: astrologer._id,
+          status: "active",
+        },
+        { $set: { status: "completed", remainingSeconds: 0 } }
+      );
+
       return res.status(400).json({
         success: false,
         message: "आपकी परामर्श अवधि समाप्त हो चुकी है। कृपया बात करने के लिए पुनः रीचार्ज करें।",
         isExpired: true,
       });
     }
+
+    let activeSession = latestSession && latestSession.status === "active" && latestSession.remainingSeconds > 10
+      ? latestSession
+      : null;
 
     // If no active session found or duration passed from body, create or track session
     const durationMinutes = Number(req.body.durationMinutes) || (activeSession ? Math.ceil(activeSession.remainingSeconds / 60) : 10);
@@ -610,6 +619,18 @@ const getUserAstrologyHistory = async (req, res) => {
     sessions = (sessions || []).filter(
       (s) => s.astrologer && (s.astrologer._id || s.astrologer.name)
     );
+
+    // Dedup by astrologer: keep only the latest session per astrologer so old stale sessions don't conflict
+    const dedupedSessions = [];
+    const seenAstros = new Set();
+    for (const s of sessions) {
+      const aId = (s.astrologer._id || s.astrologer.id || s.astrologer).toString();
+      if (!seenAstros.has(aId)) {
+        seenAstros.add(aId);
+        dedupedSessions.push(s);
+      }
+    }
+    sessions = dedupedSessions;
 
     // 2. Fallback: If no AstrologyCallSession found, check ConsultationBooking and auto-create session
     if (sessions.length === 0) {
