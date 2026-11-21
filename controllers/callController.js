@@ -629,8 +629,18 @@ const getUserAstrologyHistory = async (req, res) => {
     );
 
     // Dedup by astrologer: keep only the latest session per astrologer so old stale sessions don't conflict
+    // But prioritize active sessions with remainingSeconds > 0 over completed ones
     const dedupedSessions = [];
     const seenAstros = new Set();
+    // First pass: collect active valid sessions
+    for (const s of sessions) {
+      const aId = (s.astrologer._id || s.astrologer.id || s.astrologer).toString();
+      if (!seenAstros.has(aId) && s.status === 'active' && s.remainingSeconds > 0) {
+        seenAstros.add(aId);
+        dedupedSessions.push(s);
+      }
+    }
+    // Second pass: include non-active sessions if no active one exists for this astrologer
     for (const s of sessions) {
       const aId = (s.astrologer._id || s.astrologer.id || s.astrologer).toString();
       if (!seenAstros.has(aId)) {
